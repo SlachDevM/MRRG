@@ -7,7 +7,7 @@ Business Management Platform for Margaret River Re-Gutter
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-Backend-6DB33F?logo=springboot)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED?logo=docker)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql)
-[![Backend CI](https://github.com/SlachDevM/MRRG/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SlachDevM/MRRG/actions/workflows/backend-ci.yml)
+[![Backend CI](https://github.com/SlachDevM/MRRG/actions/workflows/backend-ci.yml/badge.svg?branch=main)](https://github.com/SlachDevM/MRRG/actions)
 
 Login :  
 <img width="964" height="1256" alt="image" src="https://github.com/user-attachments/assets/f92cc585-5ecc-45de-891a-3712e4793f1d" />
