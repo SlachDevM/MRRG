@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import '../styles/Login.css';
 
 const API_BASE = 'http://localhost:4000';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function Login() {
   const navigate = useNavigate();
@@ -19,10 +20,20 @@ export default function Login() {
     e.preventDefault();
     setError('');
 
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (!isRegister) {
+      if (!trimmedEmail || !trimmedPassword || !EMAIL_PATTERN.test(trimmedEmail)) {
+        setError('Please enter a valid email and password.');
+        return;
+      }
+    }
+
     const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
     const body = isRegister
-      ? { email, password, name, role }
-      : { email, password };
+      ? { email: trimmedEmail, password: trimmedPassword, name, role }
+      : { email: trimmedEmail, password: trimmedPassword };
 
     try {
       const response = await fetch(`${API_BASE}${endpoint}`, {
@@ -32,8 +43,12 @@ export default function Login() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        setError(data || 'Authentication failed');
+        if (!isRegister) {
+          setError('Email or password is incorrect.');
+          return;
+        }
+        const message = await response.text();
+        setError(message || 'Registration failed.');
         return;
       }
 
@@ -59,7 +74,7 @@ export default function Login() {
 
         {error && <div className="error-message">{error}</div>}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} noValidate={!isRegister}>
           {isRegister && (
             <>
               <div className="form-group">
@@ -90,7 +105,7 @@ export default function Login() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              required={isRegister}
               placeholder="you@example.com"
             />
           </div>
@@ -101,7 +116,7 @@ export default function Login() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              required={isRegister}
               placeholder="••••••••"
             />
           </div>

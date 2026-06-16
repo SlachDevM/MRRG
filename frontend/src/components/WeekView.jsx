@@ -31,13 +31,16 @@ function formatWorkers(assignedWorkers) {
 
 function ScheduledJobChip({ job, onJobClick, onDragStartRef, getPriorityColor }) {
   const { onMouseDown, onDragStart, onClick } = useDragClickGuard();
+  const awaitingConfirmation = job.status === 'READY_FOR_CONFIRMATION';
+  const canDrag = !awaitingConfirmation;
 
   return (
     <div
-      className="scheduled-job-chip"
-      draggable
+      className={`scheduled-job-chip${awaitingConfirmation ? ' awaiting-confirmation' : ''}`}
+      draggable={canDrag}
       onMouseDown={onMouseDown}
       onDragStart={(e) => {
+        if (!canDrag) return;
         onDragStart(e, () => {
           onDragStartRef.current = job;
           e.dataTransfer.effectAllowed = 'move';
@@ -51,6 +54,9 @@ function ScheduledJobChip({ job, onJobClick, onDragStartRef, getPriorityColor })
       style={{ borderLeftColor: getPriorityColor(job.priorityLevel) }}
     >
       <span className="chip-time">{job.jobStartHour || '07:50'}</span>
+      {awaitingConfirmation && (
+        <span className="chip-status-badge">Awaiting confirmation</span>
+      )}
       <span className="chip-name">{job.clientName}</span>
       <span className="chip-address">{job.clientAddress}</span>
       <span className="chip-workers">{formatWorkers(job.assignedWorkers)}</span>
@@ -94,6 +100,8 @@ export default function WeekView({
         );
         if (response.ok) {
           setScheduledJobs(await response.json());
+        } else {
+          console.error('Failed to fetch scheduled jobs:', response.status);
         }
       } catch (err) {
         console.error('Failed to fetch scheduled jobs:', err);

@@ -126,16 +126,77 @@
   font-size: 0.95rem;
 }
 
-.photo-upload input[type='file'] {
+.photo-upload input[type='file'],
+.photo-file-input {
   padding: 0.5rem;
   font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.photo-group {
+  margin-bottom: 1rem;
+}
+
+.photo-group-label {
+  margin: 0 0 0.5rem;
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.photo-thumb {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.photo-action {
+  position: absolute;
+  top: 4px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.photo-download {
+  left: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+}
+
+.photo-download:hover {
+  background: #fff;
+}
+
+.photo-delete {
+  right: 4px;
+  background: rgba(220, 53, 69, 0.92);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.photo-delete:hover {
+  background: #dc3545;
 }
 
 .photo-preview {
   display: block;
-  margin-top: 0.5rem;
-  max-width: 100%;
-  max-height: 120px;
+  width: 120px;
+  height: 120px;
   border-radius: 6px;
   object-fit: cover;
 }
@@ -157,26 +218,103 @@
   font-family: inherit;
 }
 
-.job-modal-actions button:first-child {
+.save-job-btn {
   background-color: #2d6b4d;
   color: white;
 }
 
-.job-modal-actions button:first-child:hover:not(:disabled) {
+.save-job-btn:hover:not(:disabled) {
   background-color: #1a472a;
 }
 
-.job-modal-actions button:first-child:disabled {
+.save-job-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.job-modal-actions button:last-child {
+.complete-job-btn {
+  background-color: #28a745;
+  color: white;
+}
+
+.complete-job-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.complete-job-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.confirm-job-btn {
+  background-color: #0d6efd;
+  color: white;
+}
+
+.confirm-job-btn:hover:not(:disabled) {
+  background-color: #0b5ed7;
+}
+
+.confirm-job-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.archive-job-btn {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.archive-job-btn:hover:not(:disabled) {
+  background-color: #e0a800;
+}
+
+.archive-job-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.callback-fix-btn {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.callback-fix-btn:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.callback-fix-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.job-modal-archived-banner {
+  background: #e8f4f8;
+  border-color: #17a2b8;
+  color: #0c5460;
+}
+
+.callback-fix-section {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+}
+
+.job-modal-status-banner {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #664d03;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
+}
+
+.cancel-job-btn {
   background-color: #f0f0f0;
   color: #333;
 }
 
-.job-modal-actions button:last-child:hover:not(:disabled) {
+.cancel-job-btn:hover:not(:disabled) {
   background-color: #e0e0e0;
 }
 

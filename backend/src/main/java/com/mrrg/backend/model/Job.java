@@ -3,7 +3,6 @@ package com.mrrg.backend.model;
 import jakarta.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
-
 @Entity
 @Table(name = "jobs")
 public class Job {
@@ -39,11 +38,13 @@ public class Job {
     @Column(columnDefinition = "TEXT")
     private String details;
 
-    @Lob
-    private byte[] beforePhoto;
+    @Column(name = "before_photos", columnDefinition = "TEXT")
+    @Convert(converter = StringListJsonConverter.class)
+    private List<String> beforePhotos = new ArrayList<>();
 
-    @Lob
-    private byte[] afterPhoto;
+    @Column(name = "after_photos", columnDefinition = "TEXT")
+    @Convert(converter = StringListJsonConverter.class)
+    private List<String> afterPhotos = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
     private String notes;
@@ -147,20 +148,20 @@ public class Job {
         this.details = details;
     }
 
-    public byte[] getBeforePhoto() {
-        return beforePhoto;
+    public List<String> getBeforePhotos() {
+        return beforePhotos;
     }
 
-    public void setBeforePhoto(byte[] beforePhoto) {
-        this.beforePhoto = beforePhoto;
+    public void setBeforePhotos(List<String> beforePhotos) {
+        this.beforePhotos = beforePhotos != null ? beforePhotos : new ArrayList<>();
     }
 
-    public byte[] getAfterPhoto() {
-        return afterPhoto;
+    public List<String> getAfterPhotos() {
+        return afterPhotos;
     }
 
-    public void setAfterPhoto(byte[] afterPhoto) {
-        this.afterPhoto = afterPhoto;
+    public void setAfterPhotos(List<String> afterPhotos) {
+        this.afterPhotos = afterPhotos != null ? afterPhotos : new ArrayList<>();
     }
 
     public String getNotes() {

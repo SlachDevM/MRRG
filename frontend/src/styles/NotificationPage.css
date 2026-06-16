@@ -77,6 +77,21 @@
   background-color: #f0f8f4;
 }
 
+.notification-item.clickable {
+  cursor: pointer;
+}
+
+.notification-item.clickable:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.notification-action-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #2d6b4d;
+  font-weight: 500;
+}
+
 .notification-content {
   flex: 1;
 }

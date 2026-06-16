@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../context/AuthContext';
 
@@ -10,69 +10,66 @@ import JobList from '../components/JobList';
 
 import JobModal from '../components/JobModal';
 
+import NotificationButton from '../components/NotificationButton';
 import '../styles/Dashboard.css';
 
 import '../styles/JobModal.css';
 
 
-
 const API_BASE = 'http://localhost:4000';
 
-
+function getMonday(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
 
 export default function MainDashboard() {
-
   const navigate = useNavigate();
-
+  const [searchParams, setSearchParams] = useSearchParams();
   const { auth, logout } = useAuth();
-
   const [jobs, setJobs] = useState([]);
-
   const [loading, setLoading] = useState(true);
-
   const [showJobModal, setShowJobModal] = useState(false);
-
   const [selectedJob, setSelectedJob] = useState(null);
-
   const [prefilledDate, setPrefilledDate] = useState(null);
-
   const [weekRefreshKey, setWeekRefreshKey] = useState(0);
-
-  const [selectedWeekStart, setSelectedWeekStart] = useState(getMonday(new Date()));
-
-
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() => getMonday(new Date()));
 
   const canManage = auth?.user?.role === 'MANAGER' || auth?.user?.role === 'ADMIN';
 
-
-
   useEffect(() => {
-
-    if (!auth) {
-
+    if (!auth?.token) {
       navigate('/login');
-
       return;
-
     }
-
     fetchJobs();
-
   }, [auth, navigate]);
 
+  useEffect(() => {
+    const jobId = searchParams.get('jobId');
+    if (!jobId || !auth?.token) return;
 
+    const openJobFromParam = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/jobs/${jobId}`, {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        });
+        if (response.ok) {
+          const job = await response.json();
+          setSelectedJob(job);
+          setShowJobModal(true);
+        }
+      } catch (err) {
+        console.error('Failed to open job from notification:', err);
+      } finally {
+        setSearchParams({}, { replace: true });
+      }
+    };
 
-  function getMonday(date) {
-
-    const d = new Date(date);
-
-    const day = d.getDay();
-
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-
-    return new Date(d.setDate(diff));
-
-  }
+    openJobFromParam();
+  }, [searchParams, auth?.token, setSearchParams]);
 
 
 
@@ -101,8 +98,6 @@ export default function MainDashboard() {
     }
 
   };
-
-
 
   const openCreateModal = () => {
 
@@ -146,7 +141,11 @@ export default function MainDashboard() {
 
       });
 
-    } else {
+    } else if (savedJob.status === 'ARCHIVED') {
+
+      setJobs((prev) => prev.filter((j) => j.id !== savedJob.id));
+
+    } else if (savedJob.status !== 'READY_FOR_CONFIRMATION') {
 
       setJobs((prev) => prev.filter((j) => j.id !== savedJob.id));
 
@@ -204,19 +203,15 @@ export default function MainDashboard() {
 
         <div className="header-info">
 
-          <span>Welcome, {auth.user.name}</span>
+          <span>Welcome, {auth?.user?.name ?? 'User'}</span>
 
-          <span className="role-badge">{auth.user.role}</span>
+          <span className="role-badge">{auth?.user?.role}</span>
 
         </div>
 
         <div className="header-actions">
 
-          <button className="notification-btn" onClick={() => navigate('/notifications')}>
-
-            🔔 Notifications
-
-          </button>
+          <NotificationButton />
 
           {canManage && (
 
@@ -311,6 +306,8 @@ export default function MainDashboard() {
         prefilledDate={prefilledDate}
 
         canManage={canManage}
+
+        currentUserName={auth?.user?.name ?? ''}
 
       />
 

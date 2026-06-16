@@ -51,6 +51,95 @@ function toPhotoSrc(photo) {
   return null;
 }
 
+function extractBase64(photo) {
+  if (!photo) return null;
+  if (typeof photo === 'string') {
+    return photo.startsWith('data:') ? photo.split(',')[1] : photo;
+  }
+  return null;
+}
+
+function photoEntryFromBase64(base64) {
+  const clean = extractBase64(base64);
+  return clean ? { preview: toPhotoSrc(clean), base64: clean } : null;
+}
+
+function parsePhotosFromJob(job, pluralKey, singularKey) {
+  const list = job[pluralKey];
+  if (Array.isArray(list) && list.length > 0) {
+    return list.map(photoEntryFromBase64).filter(Boolean);
+  }
+  const legacy = job[singularKey];
+  if (legacy) {
+    const entry = photoEntryFromBase64(legacy);
+    return entry ? [entry] : [];
+  }
+  return [];
+}
+
+function photosToPayload(photos) {
+  return photos.map((photo) => photo.base64);
+}
+
+function sanitizeClientName(name) {
+  return (name.trim() || 'Client').replace(/\s+/g, '_').replace(/[\\/:*?"<>|]/g, '');
+}
+
+function PhotoGallery({ title, photoType, photos, canUpload, onUpload, onDelete, onDownload }) {
+  return (
+    <div className="photo-group">
+      <p className="photo-group-label">{title}</p>
+      {photos.length > 0 && (
+        <div className="photo-grid">
+          {photos.map((photo, index) => (
+            <div key={`${title}-${index}`} className="photo-thumb">
+              <button
+                type="button"
+                className="photo-action photo-download"
+                onClick={() => onDownload(photo, photoType, index)}
+                aria-label="Download photo"
+                title="Download"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path
+                    d="M12 3v10m0 0l-4-4m4 4l4-4M5 19h14"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {canUpload && (
+                <button
+                  type="button"
+                  className="photo-action photo-delete"
+                  onClick={() => onDelete(index)}
+                  aria-label="Delete photo"
+                  title="Delete"
+                >
+                  ×
+                </button>
+              )}
+              <img src={photo.preview} alt={`${title} ${index + 1}`} className="photo-preview" />
+            </div>
+          ))}
+        </div>
+      )}
+      {canUpload && (
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          className="photo-file-input"
+          onChange={onUpload}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function JobModal({
   isOpen,
   onClose,
@@ -59,18 +148,22 @@ export default function JobModal({
   job = null,
   prefilledDate = null,
   canManage = false,
+  currentUserName = '',
 }) {
   const isEdit = Boolean(job?.id);
   const [form, setForm] = useState(EMPTY_FORM);
   const [selectedTypes, setSelectedTypes] = useState([]);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
   const [workers, setWorkers] = useState([]);
-  const [beforePreview, setBeforePreview] = useState(null);
-  const [afterPreview, setAfterPreview] = useState(null);
-  const [beforePhoto, setBeforePhoto] = useState(null);
-  const [afterPhoto, setAfterPhoto] = useState(null);
+  const [jobStatus, setJobStatus] = useState(null);
+  const [beforePhotos, setBeforePhotos] = useState([]);
+  const [afterPhotos, setAfterPhotos] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [archiving, setArchiving] = useState(false);
+  const [callbackFixing, setCallbackFixing] = useState(false);
   const [loadingJob, setLoadingJob] = useState(false);
 
   useEffect(() => {
@@ -103,10 +196,8 @@ export default function JobModal({
       });
       setSelectedTypes([]);
       setSelectedWorkers([]);
-      setBeforePreview(null);
-      setAfterPreview(null);
-      setBeforePhoto(null);
-      setAfterPhoto(null);
+      setBeforePhotos([]);
+      setAfterPhotos([]);
       setError('');
     };
 
@@ -140,10 +231,9 @@ export default function JobModal({
         setSelectedWorkers(
           fullJob.assignedWorkers ? fullJob.assignedWorkers.split(',').filter(Boolean) : []
         );
-        setBeforePreview(toPhotoSrc(fullJob.beforePhoto));
-        setAfterPreview(toPhotoSrc(fullJob.afterPhoto));
-        setBeforePhoto(null);
-        setAfterPhoto(null);
+        setJobStatus(fullJob.status || null);
+        setBeforePhotos(parsePhotosFromJob(fullJob, 'beforePhotos', 'beforePhoto'));
+        setAfterPhotos(parsePhotosFromJob(fullJob, 'afterPhotos', 'afterPhoto'));
       } catch (err) {
         console.error(err);
         setError('Failed to load job details.');
@@ -156,6 +246,27 @@ export default function JobModal({
   }, [isOpen, isEdit, job?.id, prefilledDate, token]);
 
   if (!isOpen) return null;
+
+  const isAssignedWorker = selectedWorkers.some(
+    (name) => name.trim().toLowerCase() === currentUserName.trim().toLowerCase()
+  );
+  const isArchived = jobStatus === 'ARCHIVED';
+  const isDone = jobStatus === 'DONE';
+  const isCallbackOnly = isArchived || isDone;
+  const awaitingConfirmation = jobStatus === 'READY_FOR_CONFIRMATION';
+  const isCoreReadOnly = !canManage || isCallbackOnly;
+  const canUploadPhotos = canManage || (isEdit && isAssignedWorker && !isCallbackOnly);
+  const canCallbackFix = isEdit && canManage && isCallbackOnly;
+  const canComplete =
+    isEdit &&
+    !canManage &&
+    isAssignedWorker &&
+    (jobStatus === 'SCHEDULED' || jobStatus === 'TO_BE_FIXED');
+  const canConfirm = isEdit && canManage && jobStatus === 'READY_FOR_CONFIRMATION';
+  const canArchive =
+    isEdit &&
+    canManage &&
+    !isArchived;
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -174,22 +285,93 @@ export default function JobModal({
   };
 
   const handlePhotoChange = (e, type) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    e.target.value = '';
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const base64 = dataUrl.split(',')[1];
+    const setter = type === 'before' ? setBeforePhotos : setAfterPhotos;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        const base64 = dataUrl.split(',')[1];
+        setter((prev) => [...prev, { preview: dataUrl, base64 }]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const persistPhotoLists = async (nextBefore, nextAfter) => {
+    const response = await fetch(`${API_BASE}/api/jobs/${job.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        beforePhotos: photosToPayload(nextBefore),
+        afterPhotos: photosToPayload(nextAfter),
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to save photos.');
+    }
+
+    const savedJob = await response.json();
+    setBeforePhotos(parsePhotosFromJob(savedJob, 'beforePhotos', 'beforePhoto'));
+    setAfterPhotos(parsePhotosFromJob(savedJob, 'afterPhotos', 'afterPhoto'));
+    onSuccess(savedJob);
+    return savedJob;
+  };
+
+  const handleDeletePhoto = async (type, index) => {
+    if (!window.confirm('Delete this photo?')) {
+      return;
+    }
+
+    const nextBefore =
+      type === 'before' ? beforePhotos.filter((_, photoIndex) => photoIndex !== index) : beforePhotos;
+    const nextAfter =
+      type === 'after' ? afterPhotos.filter((_, photoIndex) => photoIndex !== index) : afterPhotos;
+
+    if (type === 'before') {
+      setBeforePhotos(nextBefore);
+    } else {
+      setAfterPhotos(nextAfter);
+    }
+
+    if (!isEdit) {
+      return;
+    }
+
+    setError('');
+    setSubmitting(true);
+    try {
+      await persistPhotoLists(nextBefore, nextAfter);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete photo.');
       if (type === 'before') {
-        setBeforePreview(dataUrl);
-        setBeforePhoto(base64);
+        setBeforePhotos(beforePhotos);
       } else {
-        setAfterPreview(dataUrl);
-        setAfterPhoto(base64);
+        setAfterPhotos(afterPhotos);
       }
-    };
-    reader.readAsDataURL(file);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const downloadPhoto = (photo, photoType, index) => {
+    const clientPart = sanitizeClientName(form.clientName);
+    const typePart = photoType === 'before' ? 'Before' : 'After';
+    const link = document.createElement('a');
+    link.href = photo.preview;
+    link.download = `${clientPart}_${typePart}_${index + 1}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleClose = () => {
@@ -200,6 +382,42 @@ export default function JobModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (isCallbackOnly && canManage) {
+      setSubmitting(true);
+      try {
+        const payload = {
+          details: form.details.trim() || null,
+          notes: form.notes.trim() || null,
+          beforePhotos: photosToPayload(beforePhotos),
+          afterPhotos: photosToPayload(afterPhotos),
+        };
+
+        const response = await fetch(`${API_BASE}/api/jobs/${job.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          setError('Failed to save changes.');
+          return;
+        }
+
+        const savedJob = await response.json();
+        onSuccess(savedJob);
+        onClose();
+      } catch (err) {
+        console.error(err);
+        setError('Failed to save changes.');
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
 
     if (!form.clientName.trim() || !form.clientPhone.trim() || !form.clientAddress.trim()) {
       setError('Client name, phone, and address are required.');
@@ -232,8 +450,10 @@ export default function JobModal({
         payload.assignedWorkers = selectedWorkers.join(',');
       }
 
-      if (beforePhoto) payload.beforePhoto = beforePhoto;
-      if (afterPhoto) payload.afterPhoto = afterPhoto;
+      if (isEdit) {
+        payload.beforePhotos = photosToPayload(beforePhotos);
+        payload.afterPhotos = photosToPayload(afterPhotos);
+      }
 
       const url = isEdit ? `${API_BASE}/api/jobs/${job.id}` : `${API_BASE}/api/jobs`;
       const method = isEdit ? 'PUT' : 'POST';
@@ -263,10 +483,171 @@ export default function JobModal({
     }
   };
 
+  const handleSavePhotos = async () => {
+    setError('');
+    setSubmitting(true);
+    try {
+      await persistPhotoLists(beforePhotos, afterPhotos);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to save photos.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleCompleteJob = async () => {
+    if (!window.confirm('Mark this job as complete?')) {
+      return;
+    }
+
+    setError('');
+    setCompleting(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/jobs/${job.id}/complete`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        setError('Failed to complete job.');
+        return;
+      }
+
+      const savedJob = await response.json();
+      onSuccess(savedJob);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to complete job.');
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  const handleArchiveJob = async () => {
+    if (!window.confirm('Archive this job? It will be removed from the schedule.')) {
+      return;
+    }
+
+    setError('');
+    setArchiving(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/jobs/${job.id}/archive`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        setError('Failed to archive job.');
+        return;
+      }
+
+      const savedJob = await response.json();
+      onSuccess(savedJob);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to archive job.');
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const handleCallbackFix = async () => {
+    setError('');
+    setCallbackFixing(true);
+    try {
+      const payload = {};
+      const jobDate = dateInputToTimestamp(form.jobDate);
+      if (jobDate) {
+        payload.jobDate = jobDate;
+        payload.jobStartHour = form.jobStartHour || '07:50';
+      }
+
+      const response = await fetch(`${API_BASE}/api/jobs/${job.id}/callback-fix`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        setError('Failed to callback fix job.');
+        return;
+      }
+
+      const savedJob = await response.json();
+      onSuccess(savedJob);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to callback fix job.');
+    } finally {
+      setCallbackFixing(false);
+    }
+  };
+
+  const handleConfirmJob = async () => {
+    if (!window.confirm('Confirm this job as done? It will be removed from the schedule.')) {
+      return;
+    }
+
+    setError('');
+    setConfirming(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/jobs/${job.id}/confirm`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        setError('Failed to confirm job.');
+        return;
+      }
+
+      const savedJob = await response.json();
+      onSuccess(savedJob);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      setError('Failed to confirm job.');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   return (
     <div className="job-modal-overlay" onClick={handleClose}>
       <div className="job-modal" onClick={(e) => e.stopPropagation()}>
-        <h3>{isEdit ? 'Edit Job' : 'Create Job'}</h3>
+        <h3>
+          {isEdit
+            ? isArchived
+              ? 'Archived Job'
+              : isDone
+                ? 'Done Job'
+                : 'Edit Job'
+            : 'Create Job'}
+        </h3>
+
+        {isCallbackOnly && (
+          <p className="job-modal-status-banner job-modal-archived-banner">
+            {isDone
+              ? 'This job is done. You can still update details, notes, and photos. Use Callback Fix to reschedule, or Archive to move it to archived jobs.'
+              : 'This job is archived. You can still update details, notes, and photos. Use Callback Fix to send it back to the schedule or pending pool.'}
+          </p>
+        )}
+
+        {awaitingConfirmation && (
+          <p className="job-modal-status-banner">
+            {canManage
+              ? 'This job was marked complete by a worker. Review and confirm when ready.'
+              : 'Waiting for manager confirmation.'}
+          </p>
+        )}
 
         {loadingJob ? (
           <p className="job-modal-loading">Loading job...</p>
@@ -280,7 +661,7 @@ export default function JobModal({
                 onChange={handleChange}
                 placeholder="John Smith"
                 required
-                disabled={!canManage}
+                disabled={isCoreReadOnly}
               />
             </label>
 
@@ -292,7 +673,7 @@ export default function JobModal({
                 onChange={handleChange}
                 placeholder="0412 345 678"
                 required
-                disabled={!canManage}
+                disabled={isCoreReadOnly}
               />
             </label>
 
@@ -304,7 +685,7 @@ export default function JobModal({
                 onChange={handleChange}
                 placeholder="123 Main St, Sydney"
                 required
-                disabled={!canManage}
+                disabled={isCoreReadOnly}
               />
             </label>
 
@@ -317,7 +698,7 @@ export default function JobModal({
                       type="checkbox"
                       checked={selectedTypes.includes(type)}
                       onChange={() => toggleJobType(type)}
-                      disabled={!canManage}
+                      disabled={isCoreReadOnly}
                     />
                     {formatJobTypeLabel(type)}
                   </label>
@@ -327,7 +708,7 @@ export default function JobModal({
 
             <label>
               Priority
-              <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange} disabled={!canManage}>
+              <select name="priorityLevel" value={form.priorityLevel} onChange={handleChange} disabled={isCoreReadOnly}>
                 <option value="1">1 - Low</option>
                 <option value="2">2 - Medium</option>
                 <option value="3">3 - High</option>
@@ -359,7 +740,7 @@ export default function JobModal({
               />
             </label>
 
-            {(canManage || isEdit) && (
+            {(canManage || isEdit) && !isCallbackOnly && (
               <>
                 <div className="job-modal-section">
                   <h4>Schedule</h4>
@@ -371,7 +752,7 @@ export default function JobModal({
                         name="jobDate"
                         value={form.jobDate}
                         onChange={handleChange}
-                        disabled={!canManage}
+                        disabled={isCoreReadOnly}
                       />
                     </label>
                     <label>
@@ -381,7 +762,7 @@ export default function JobModal({
                         name="jobStartHour"
                         value={form.jobStartHour}
                         onChange={handleChange}
-                        disabled={!canManage}
+                        disabled={isCoreReadOnly}
                       />
                     </label>
                   </div>
@@ -389,7 +770,9 @@ export default function JobModal({
 
                 <fieldset className="job-types-fieldset">
                   <legend>Assign Workers</legend>
-                  {workers.length === 0 ? (
+                  {!canManage && selectedWorkers.length > 0 ? (
+                    <p className="job-modal-hint">{selectedWorkers.join(', ')}</p>
+                  ) : workers.length === 0 ? (
                     <p className="job-modal-hint">No workers available.</p>
                   ) : (
                     <div className="job-types-grid">
@@ -399,7 +782,7 @@ export default function JobModal({
                             type="checkbox"
                             checked={selectedWorkers.includes(worker.name)}
                             onChange={() => toggleWorker(worker.name)}
-                            disabled={!canManage}
+                            disabled={isCoreReadOnly}
                           />
                           {worker.name}
                         </label>
@@ -407,48 +790,129 @@ export default function JobModal({
                     </div>
                   )}
                 </fieldset>
-
-                <div className="job-modal-section">
-                  <h4>Photos</h4>
-                  <div className="job-modal-row">
-                    <label className="photo-upload">
-                      Before Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoChange(e, 'before')}
-                        disabled={!canManage}
-                      />
-                      {beforePreview && (
-                        <img src={beforePreview} alt="Before" className="photo-preview" />
-                      )}
-                    </label>
-                    <label className="photo-upload">
-                      After Photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoChange(e, 'after')}
-                        disabled={!canManage}
-                      />
-                      {afterPreview && (
-                        <img src={afterPreview} alt="After" className="photo-preview" />
-                      )}
-                    </label>
-                  </div>
-                </div>
               </>
+            )}
+
+            {isEdit && (canUploadPhotos || beforePhotos.length > 0 || afterPhotos.length > 0) && (
+              <div className="job-modal-section">
+                <h4>Photos</h4>
+                <PhotoGallery
+                  title="Before Photos"
+                  photoType="before"
+                  photos={beforePhotos}
+                  canUpload={canUploadPhotos}
+                  onUpload={(e) => handlePhotoChange(e, 'before')}
+                  onDelete={(index) => handleDeletePhoto('before', index)}
+                  onDownload={downloadPhoto}
+                />
+                <PhotoGallery
+                  title="After Photos"
+                  photoType="after"
+                  photos={afterPhotos}
+                  canUpload={canUploadPhotos}
+                  onUpload={(e) => handlePhotoChange(e, 'after')}
+                  onDelete={(index) => handleDeletePhoto('after', index)}
+                  onDownload={downloadPhoto}
+                />
+              </div>
+            )}
+
+            {canCallbackFix && (
+              <div className="job-modal-section callback-fix-section">
+                <h4>Callback Fix</h4>
+                <p className="job-modal-hint">
+                  Optionally pick a new date to put the job back on the week schedule, or leave empty
+                  to send it to the pending pool as To Be Fixed.
+                </p>
+                <div className="job-modal-row">
+                  <label>
+                    New Date (optional)
+                    <input
+                      type="date"
+                      name="jobDate"
+                      value={form.jobDate}
+                      onChange={handleChange}
+                    />
+                  </label>
+                  <label>
+                    Start Hour
+                    <input
+                      type="time"
+                      name="jobStartHour"
+                      value={form.jobStartHour}
+                      onChange={handleChange}
+                      disabled={!form.jobDate}
+                    />
+                  </label>
+                </div>
+              </div>
             )}
 
             {error && <p className="job-modal-error">{error}</p>}
 
             <div className="job-modal-actions">
-              {canManage && (
-                <button type="submit" disabled={submitting || loadingJob}>
-                  {submitting ? (isEdit ? 'Saving...' : 'Creating...') : isEdit ? 'Save Job' : 'Create Job'}
+              {canCallbackFix && (
+                <button
+                  type="button"
+                  className="callback-fix-btn"
+                  onClick={handleCallbackFix}
+                  disabled={callbackFixing || loadingJob}
+                >
+                  {callbackFixing ? 'Processing...' : 'Callback Fix'}
                 </button>
               )}
-              <button type="button" onClick={handleClose} disabled={submitting}>
+              {canArchive && (
+                <button
+                  type="button"
+                  className="archive-job-btn"
+                  onClick={handleArchiveJob}
+                  disabled={submitting || loadingJob || completing || confirming || archiving}
+                >
+                  {archiving ? 'Archiving...' : 'Archive'}
+                </button>
+              )}
+              {canConfirm && (
+                <button
+                  type="button"
+                  className="confirm-job-btn"
+                  onClick={handleConfirmJob}
+                  disabled={submitting || loadingJob || completing || confirming}
+                >
+                  {confirming ? 'Confirming...' : 'Confirmed'}
+                </button>
+              )}
+              {canComplete && (
+                <button
+                  type="button"
+                  className="complete-job-btn"
+                  onClick={handleCompleteJob}
+                  disabled={submitting || loadingJob || completing || confirming}
+                >
+                  {completing ? 'Completing...' : 'Complete Job'}
+                </button>
+              )}
+              {canUploadPhotos && !canManage && isEdit && (
+                <button
+                  type="button"
+                  className="save-job-btn"
+                  onClick={handleSavePhotos}
+                  disabled={submitting || loadingJob || completing || confirming}
+                >
+                  {submitting ? 'Saving...' : 'Save Photos'}
+                </button>
+              )}
+              {canManage && (
+                <button type="submit" className="save-job-btn" disabled={submitting || loadingJob || confirming || archiving || callbackFixing}>
+                  {submitting
+                    ? isEdit
+                      ? 'Saving...'
+                      : 'Creating...'
+                    : isEdit
+                      ? 'Save Job'
+                      : 'Create Job'}
+                </button>
+              )}
+              <button type="button" className="cancel-job-btn" onClick={handleClose} disabled={submitting || completing || confirming || archiving || callbackFixing}>
                 {canManage ? 'Cancel' : 'Close'}
               </button>
             </div>

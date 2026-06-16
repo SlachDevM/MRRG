@@ -1,18 +1,32 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext();
+const defaultAuthContext = {
+  auth: null,
+  loading: true,
+  login: () => {},
+  logout: () => {},
+};
+
+const AuthContext = createContext(defaultAuthContext);
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
-    if (token && user) {
-      setAuth({ token, user: JSON.parse(user) });
+    try {
+      const token = localStorage.getItem('token');
+      const user = localStorage.getItem('user');
+      if (token && user) {
+        setAuth({ token, user: JSON.parse(user) });
+      }
+    } catch (err) {
+      console.error('Failed to restore session:', err);
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = (user, token) => {

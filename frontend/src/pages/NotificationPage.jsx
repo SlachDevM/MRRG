@@ -1,23 +1,41 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import '../styles/NotificationPage.css';
 
 const API_BASE = 'http://localhost:4000';
+
+const NOTIFICATION_TYPE_LABELS = {
+  JOB_ASSIGNED: 'Assigned Job',
+  JOB_RESCHEDULED: 'Rescheduled Job',
+  JOB_READY_FOR_CONFIRMATION: 'Job Ready for Confirmation',
+  JOB_CONFIRMED: 'Job Confirmed',
+};
+
+const NAVIGABLE_TYPES = ['JOB_ASSIGNED', 'JOB_READY_FOR_CONFIRMATION'];
+
+function getActionHint(type) {
+  if (type === 'JOB_ASSIGNED') return 'Click to view job details';
+  if (type === 'JOB_READY_FOR_CONFIRMATION') return 'Click to review and confirm';
+  return null;
+}
 
 export default function NotificationPage() {
   const navigate = useNavigate();
   const { auth, logout } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { decrementUnread, clearUnread, refreshUnreadCount } = useNotifications();
 
   useEffect(() => {
-    if (!auth) {
+    if (!auth?.token) {
       navigate('/login');
       return;
     }
     fetchNotifications();
-  }, [auth, navigate]);
+    refreshUnreadCount();
+  }, [auth?.token, navigate, refreshUnreadCount]);
 
   const fetchNotifications = async () => {
     try {
@@ -41,14 +59,28 @@ export default function NotificationPage() {
       });
 
       if (response.ok) {
-        setNotifications(
-          notifications.map((n) =>
-            n.id === notificationId ? { ...n, isRead: true } : n
-          )
+        const wasUnread = notifications.some((n) => n.id === notificationId && !n.isRead);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n))
         );
+        if (wasUnread) {
+          decrementUnread();
+        }
+        return true;
       }
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
+    }
+    return false;
+  };
+
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) {
+      await handleMarkAsRead(notif.id);
+    }
+
+    if (NAVIGABLE_TYPES.includes(notif.type) && notif.jobId) {
+      navigate(`/?jobId=${notif.jobId}`);
     }
   };
 
@@ -60,6 +92,7 @@ export default function NotificationPage() {
       });
 
       if (response.ok) {
+        clearUnread();
         fetchNotifications();
       }
     } catch (err) {
@@ -74,6 +107,10 @@ export default function NotificationPage() {
 
   if (loading) {
     return <div className="loading">Loading notifications...</div>;
+  }
+
+  function formatNotificationType(type) {
+    return NOTIFICATION_TYPE_LABELS[type] || type.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
   }
 
   return (
@@ -100,30 +137,38 @@ export default function NotificationPage() {
           </div>
         ) : (
           <div className="notification-list">
-            {notifications.map((notif) => (
-              <div
-                key={notif.id}
-                className={`notification-item ${notif.isRead ? 'read' : 'unread'}`}
-              >
-                <div className="notification-content">
-                  <div className="notification-header-row">
-                    <span className="notification-type">{notif.type}</span>
-                    <span className="notification-time">
-                      {new Date(notif.createdAt).toLocaleString()}
-                    </span>
+            {notifications.map((notif) => {
+              const actionHint = getActionHint(notif.type);
+
+              return (
+                <div
+                  key={notif.id}
+                  className={`notification-item ${notif.isRead ? 'read' : 'unread'} clickable`}
+                  onClick={() => handleNotificationClick(notif)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleNotificationClick(notif);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="notification-content">
+                    <div className="notification-header-row">
+                      <span className="notification-type">{formatNotificationType(notif.type)}</span>
+                      <span className="notification-time">
+                        {new Date(notif.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="notification-message">{notif.message}</p>
+                    {actionHint && (
+                      <p className="notification-action-hint">{actionHint}</p>
+                    )}
                   </div>
-                  <p className="notification-message">{notif.message}</p>
                 </div>
-                {!notif.isRead && (
-                  <button
-                    className="mark-read-btn"
-                    onClick={() => handleMarkAsRead(notif.id)}
-                  >
-                    Mark as Read
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>

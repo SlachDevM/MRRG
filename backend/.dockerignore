@@ -3,3 +3,5 @@ target/
 mvnw
 mvnw.cmd
 *.log
+.git
+.gitignore

@@ -21,6 +21,7 @@
 .admin-header-actions {
   display: flex;
   gap: 1rem;
+  overflow: visible;
 }
 
 .back-btn,
