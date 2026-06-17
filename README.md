@@ -19,6 +19,13 @@ MRRG is a roofing business management platform developed for Margaret River Re-G
 
 The application centralizes scheduling, employee assignment, field reporting, manager validation, notifications and job archiving. While built for a real business, it also serves as my portfolio, demonstrating how I design and develop maintainable business software with Java, Spring Boot and React.
 
+The backend is shared by two clients:
+
+React Web application for managers and administrators
+Android application (Jetpack Compose) for field workers
+
+MRRG-Mobile : https://github.com/SlachDevM/MRRG-Mobile
+
 # Business Problem
 
 Before MRRG, job scheduling, communication and progress tracking relied primarily on manual coordination between managers and field workers.
@@ -44,6 +51,7 @@ This platform centralizes those processes into a single application.
 | Backend | Java 21, Spring Boot, Spring Security |
 |----------|---------------------------------------|
 | Frontend | React |
+| Frontend (Mobile) | Kotlin + Jetpack Compose |
 | Database | PostgreSQL |
 | Authentication | JWT |
 | Containerization | Docker Compose |
@@ -54,12 +62,14 @@ This platform centralizes those processes into a single application.
 # Deployment Architecture
 
 ```text
-           Docker Compose
-                 │
- ┌───────────────┼───────────────┐
- │               │               │
- ▼               ▼               ▼
-React SPA   Spring Boot API   PostgreSQL
+                 PostgreSQL
+                      ▲
+                      │
+              Spring Boot API
+                JWT / REST API
+               ▲             ▲
+               │             │
+          React Web     Android App
 ```
 
 # Technical Decisions
