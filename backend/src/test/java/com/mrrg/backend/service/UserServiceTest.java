@@ -146,4 +146,42 @@ class UserServiceTest {
 
         verify(userRepository).findByName("John Worker");
     }
+
+    @Test
+    void updateFcmToken_shouldUpdateTokenAndUpdateTimestamp() {
+        User user = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
+        user.setId(1L);
+        user.setFcmToken(null);
+
+        User updatedUser = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
+        updatedUser.setId(1L);
+        updatedUser.setFcmToken("firebase-token-12345");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = userService.updateFcmToken(1L, "firebase-token-12345");
+
+        assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getFcmToken()).isEqualTo("firebase-token-12345");
+
+        verify(userRepository).findById(1L);
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
+    void updateFcmToken_shouldUpdateExistingToken() {
+        User user = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
+        user.setId(1L);
+        user.setFcmToken("old-token");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        User result = userService.updateFcmToken(1L, "new-token-xyz");
+
+        assertThat(result.getFcmToken()).isEqualTo("new-token-xyz");
+
+        verify(userRepository).save(user);
+    }
 }

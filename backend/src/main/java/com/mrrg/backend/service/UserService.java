@@ -57,4 +57,11 @@ public class UserService {
     public List<User> findByName(String name) {
         return userRepository.findByName(name);
     }
+
+    public User updateFcmToken(Long userId, String fcmToken) {
+        User user = getById(userId);
+        user.setFcmToken(fcmToken);
+        user.setUpdatedAt(System.currentTimeMillis());
+        return userRepository.save(user);
+    }
 }

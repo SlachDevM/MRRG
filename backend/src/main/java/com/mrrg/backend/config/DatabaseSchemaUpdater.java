@@ -28,6 +28,8 @@ public class DatabaseSchemaUpdater implements ApplicationListener<ApplicationRea
 
         jdbcTemplate.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS before_photos TEXT");
         jdbcTemplate.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS after_photos TEXT");
+        
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token TEXT");
 
         migrateLegacyPhotoColumn("before_photo", "before_photos");
         migrateLegacyPhotoColumn("after_photo", "after_photos");

@@ -28,6 +28,9 @@ public class User {
     @Column(name = "updated_at")
     private Long updatedAt;
 
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
+    private String fcmToken;
+
     public User() {
         this.createdAt = System.currentTimeMillis();
         this.updatedAt = System.currentTimeMillis();
@@ -96,5 +99,13 @@ public class User {
 
     public void setUpdatedAt(Long updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 }
