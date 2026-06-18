@@ -29,3 +29,8 @@ Thumbs.db
 
 # Environment files
 .env
+
+# Firebase service account (never commit)
+firebase-service-account.json
+backend/firebase-service-account.json
+
