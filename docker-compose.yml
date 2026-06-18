@@ -9,6 +9,9 @@ services:
       - SPRING_DATASOURCE_USERNAME=mrrg
       - SPRING_DATASOURCE_PASSWORD=mrrgpass
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - FIREBASE_SERVICE_ACCOUNT_PATH=/app/firebase-service-account.json
+    volumes:
+      - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
     depends_on:
       - postgres
 
