@@ -2,6 +2,7 @@ package com.mrrg.backend.controller;
 
 import com.mrrg.backend.dto.UserSummary;
 import com.mrrg.backend.dto.FcmTokenRequest;
+import com.mrrg.backend.dto.UserProfileResponse;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.security.JwtAuthenticationToken;
 import com.mrrg.backend.service.UserService;
@@ -21,6 +22,19 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<UserProfileResponse> getCurrentUser(Authentication authentication) {
+        Long userId = ((JwtAuthenticationToken) authentication).getUserId();
+        User user = userService.getById(userId);
+        UserProfileResponse response = new UserProfileResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole()
+        );
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/workers")

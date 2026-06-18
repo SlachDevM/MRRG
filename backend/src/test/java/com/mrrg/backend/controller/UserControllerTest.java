@@ -1,6 +1,7 @@
 package com.mrrg.backend.controller;
 
 import com.mrrg.backend.dto.FcmTokenRequest;
+import com.mrrg.backend.dto.UserProfileResponse;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.model.UserRole;
 import com.mrrg.backend.security.JwtAuthenticationToken;
@@ -24,6 +25,69 @@ class UserControllerTest {
 
     @InjectMocks
     private UserController userController;
+
+    @Test
+    void getCurrentUser_shouldReturnUserProfileResponse_forAuthenticatedUser() {
+        User user = new User("employee@test.com", "password", "John Doe", UserRole.EMPLOYEE);
+        user.setId(1L);
+
+        JwtAuthenticationToken auth = new JwtAuthenticationToken(1L, "employee@test.com", true);
+
+        when(userService.getById(1L)).thenReturn(user);
+
+        ResponseEntity<UserProfileResponse> response = userController.getCurrentUser(auth);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().getId()).isEqualTo(1L);
+        assertThat(response.getBody().getName()).isEqualTo("John Doe");
+        assertThat(response.getBody().getEmail()).isEqualTo("employee@test.com");
+        assertThat(response.getBody().getRole()).isEqualTo(UserRole.EMPLOYEE);
+
+        verify(userService).getById(1L);
+    }
+
+    @Test
+    void getCurrentUser_shouldNotExposeSensitiveData() {
+        User user = new User("manager@test.com", "hashed-password", "Manager Name", UserRole.MANAGER);
+        user.setId(2L);
+        user.setFcmToken("firebase-token-secret");
+
+        JwtAuthenticationToken auth = new JwtAuthenticationToken(2L, "manager@test.com", true);
+
+        when(userService.getById(2L)).thenReturn(user);
+
+        ResponseEntity<UserProfileResponse> response = userController.getCurrentUser(auth);
+
+        UserProfileResponse body = response.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getId()).isEqualTo(2L);
+        assertThat(body.getName()).isEqualTo("Manager Name");
+        assertThat(body.getEmail()).isEqualTo("manager@test.com");
+        assertThat(body.getRole()).isEqualTo(UserRole.MANAGER);
+    }
+
+    @Test
+    void getCurrentUser_shouldWorkForAllUserRoles() {
+        UserRole[] roles = {UserRole.EMPLOYEE, UserRole.MANAGER, UserRole.ADMIN};
+
+        for (UserRole role : roles) {
+            User user = new User("user@test.com", "password", "Test User", role);
+            user.setId(1L);
+
+            JwtAuthenticationToken auth = new JwtAuthenticationToken(1L, "user@test.com", true);
+
+            when(userService.getById(1L)).thenReturn(user);
+
+            ResponseEntity<UserProfileResponse> response = userController.getCurrentUser(auth);
+
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(response.getBody()).isNotNull();
+            assertThat(response.getBody().getRole()).isEqualTo(role);
+
+            verify(userService, atLeastOnce()).getById(1L);
+        }
+    }
 
     @Test
     void updateFcmToken_shouldUpdateTokenAndReturnNoContent() {

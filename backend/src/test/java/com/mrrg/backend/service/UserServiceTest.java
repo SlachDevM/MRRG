@@ -184,4 +184,19 @@ class UserServiceTest {
 
         verify(userRepository).save(user);
     }
+
+    @Test
+    void getById_shouldReturnCurrentUserProfile_forUserProfile() {
+        User user = new User("employee@test.com", "password", "John Doe", UserRole.EMPLOYEE);
+        user.setId(5L);
+
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+
+        User result = userService.getById(5L);
+
+        assertThat(result.getId()).isEqualTo(5L);
+        assertThat(result.getName()).isEqualTo("John Doe");
+        assertThat(result.getEmail()).isEqualTo("employee@test.com");
+        assertThat(result.getRole()).isEqualTo(UserRole.EMPLOYEE);
+    }
 }
