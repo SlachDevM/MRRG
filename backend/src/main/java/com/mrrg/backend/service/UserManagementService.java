@@ -155,9 +155,7 @@ public class UserManagementService {
 
         if (status == UserStatus.PENDING_ACTIVATION) {
             // Invalidate old tokens for this user
-            List<AccountActivationToken> oldTokens = tokenRepository.findAll().stream()
-                    .filter(t -> t.getUser().getId().equals(user.getId()) && !t.isUsed())
-                    .toList();
+            List<AccountActivationToken> oldTokens = tokenRepository.findUnusedByUserId(user.getId());
             oldTokens.forEach(t -> t.setUsedAt(System.currentTimeMillis()));
             tokenRepository.saveAll(oldTokens);
 
@@ -212,9 +210,7 @@ public class UserManagementService {
             // Invalidate all unused activation tokens for this pending user
             // This ensures the old activation link will no longer work
             // and the status transitions from PENDING_ACTIVATION to DISABLED
-            List<AccountActivationToken> pendingTokens = tokenRepository.findAll().stream()
-                    .filter(t -> t.getUser().getId().equals(userId) && !t.isUsed())
-                    .toList();
+            List<AccountActivationToken> pendingTokens = tokenRepository.findUnusedByUserId(userId);
             
             pendingTokens.forEach(t -> {
                 t.setUsedAt(System.currentTimeMillis());
@@ -288,7 +284,7 @@ public class UserManagementService {
         // If user has empty password, they never activated, so we need resend-activation
         // If user has a password, they were previously activated, so we can reactivate them
 
-        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+        if (!user.hasActivatedAccount()) {
             // User never set a password (never completed activation)
             // This is a deactivated-pending user
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
@@ -322,15 +318,15 @@ public class UserManagementService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        UserStatus status = computeStatus(user);
-        boolean isNeverActivated = user.getPassword() == null || user.getPassword().isEmpty();
+        UserStatus currentStatus = computeStatus(user);
+        boolean isNeverActivated = !user.hasActivatedAccount();
 
         // Allow resend for:
         // 1. PENDING_ACTIVATION users (normal case)
         // 2. DISABLED users who never activated (deactivated-pending users)
-        if (status == UserStatus.PENDING_ACTIVATION) {
+        if (currentStatus == UserStatus.PENDING_ACTIVATION) {
             // Normal pending user - resend activation
-        } else if (status == UserStatus.DISABLED && isNeverActivated) {
+        } else if (currentStatus == UserStatus.DISABLED && isNeverActivated) {
             // Deactivated-pending user (never set password) - allow resend
         } else {
             // ACTIVE users or DISABLED users who already activated
@@ -339,9 +335,7 @@ public class UserManagementService {
         }
 
         // Invalidate old tokens
-        List<AccountActivationToken> oldTokens = tokenRepository.findAll().stream()
-                .filter(t -> t.getUser().getId().equals(userId) && !t.isUsed())
-                .toList();
+        List<AccountActivationToken> oldTokens = tokenRepository.findUnusedByUserId(userId);
         oldTokens.forEach(t -> t.setUsedAt(System.currentTimeMillis()));
         tokenRepository.saveAll(oldTokens);
 
@@ -371,8 +365,7 @@ public class UserManagementService {
         }
 
         // Check if user has a valid (unused and not expired) activation token
-        boolean hasPendingToken = tokenRepository.findAll().stream()
-                .anyMatch(t -> t.getUser().getId().equals(user.getId()) && t.isValid());
+        boolean hasPendingToken = tokenRepository.hasValidTokenByUserId(user.getId());
 
         return hasPendingToken ? UserStatus.PENDING_ACTIVATION : UserStatus.DISABLED;
     }

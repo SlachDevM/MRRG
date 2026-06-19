@@ -107,8 +107,7 @@ public class AuthService {
         }
 
         // Check if user has a valid (unused and not expired) activation token
-        boolean hasPendingToken = tokenRepository.findAll().stream()
-                .anyMatch(t -> t.getUser().getId().equals(user.getId()) && t.isValid());
+        boolean hasPendingToken = tokenRepository.hasValidTokenByUserId(user.getId());
 
         return hasPendingToken ? UserStatus.PENDING_ACTIVATION : UserStatus.DISABLED;
     }

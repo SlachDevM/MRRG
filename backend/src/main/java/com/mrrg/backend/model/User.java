@@ -114,6 +114,18 @@ public class User {
         this.fcmToken = fcmToken;
     }
 
+    /**
+     * Checks if the user has activated their account by setting a password.
+     * Used to distinguish between:
+     * - Never-activated users (pending invitation, deactivated before activation)
+     * - Previously-activated users (can be reactivated after deactivation)
+     *
+     * @return true if user has set a password (has activated), false otherwise
+     */
+    public boolean hasActivatedAccount() {
+        return password != null && !password.isEmpty();
+    }
+
     public Boolean getEnabled() {
         return enabled;
     }
