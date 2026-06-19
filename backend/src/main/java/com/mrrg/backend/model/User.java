@@ -31,9 +31,13 @@ public class User {
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
 
+    @Column(name = "enabled", nullable = false)
+    private Boolean enabled = false;
+
     public User() {
         this.createdAt = System.currentTimeMillis();
         this.updatedAt = System.currentTimeMillis();
+        this.enabled = false;
     }
 
     public User(String email, String password, String name, UserRole role) {
@@ -43,6 +47,7 @@ public class User {
         this.role = role;
         this.createdAt = System.currentTimeMillis();
         this.updatedAt = System.currentTimeMillis();
+        this.enabled = false;
     }
 
     public Long getId() {
@@ -107,5 +112,13 @@ public class User {
 
     public void setFcmToken(String fcmToken) {
         this.fcmToken = fcmToken;
+    }
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
     }
 }

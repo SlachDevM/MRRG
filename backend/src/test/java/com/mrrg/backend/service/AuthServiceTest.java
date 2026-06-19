@@ -40,6 +40,7 @@ class AuthServiceTest {
     void login_shouldReturnToken_whenCredentialsAreValid() {
         User user = new User("manager@test.com", "encoded-password", "Manager", UserRole.MANAGER);
         user.setId(1L);
+        user.setEnabled(true);
 
         when(userRepository.findByEmail("manager@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password", "encoded-password")).thenReturn(true);
@@ -57,9 +58,29 @@ class AuthServiceTest {
     }
 
     @Test
+    void login_shouldThrowForbidden_whenAccountNotActivated() {
+        User user = new User("inactive@test.com", "encoded-password", "Inactive User", UserRole.EMPLOYEE);
+        user.setId(3L);
+        user.setEnabled(false);
+
+        when(userRepository.findByEmail("inactive@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password", "encoded-password")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login(
+                new LoginRequest("inactive@test.com", "password")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("403")
+                .hasMessageContaining("not activated");
+
+        verify(tokenProvider, never()).generateToken(anyLong(), anyString());
+    }
+
+    @Test
     void login_shouldThrowUnauthorized_whenPasswordIsInvalid() {
         User user = new User("worker@test.com", "encoded-password", "Worker", UserRole.EMPLOYEE);
         user.setId(2L);
+        user.setEnabled(true);
 
         when(userRepository.findByEmail("worker@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-password", "encoded-password")).thenReturn(false);

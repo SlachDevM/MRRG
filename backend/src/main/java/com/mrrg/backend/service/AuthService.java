@@ -18,15 +18,18 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider tokenProvider;
+    private final ActivationService activationService;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            JwtTokenProvider tokenProvider
+            JwtTokenProvider tokenProvider,
+            ActivationService activationService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenProvider = tokenProvider;
+        this.activationService = activationService;
     }
 
     public LoginResponse login(LoginRequest request) {
@@ -38,6 +41,11 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
+        }
+
+        // Check if account is activated
+        if (!user.getEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not activated");
         }
 
         return buildLoginResponse(user);
@@ -53,6 +61,7 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setName(request.getName());
         user.setRole(request.getRole() != null ? request.getRole() : UserRole.EMPLOYEE);
+        user.setEnabled(true); // Direct registration activates immediately
 
         return buildLoginResponse(userRepository.save(user));
     }
@@ -66,5 +75,10 @@ public class AuthService {
                 user.getRole(),
                 token
         );
+    }
+
+    public LoginResponse activateAccount(String token, String password) {
+        User activatedUser = activationService.activateAccount(token, password);
+        return buildLoginResponse(activatedUser);
     }
 }

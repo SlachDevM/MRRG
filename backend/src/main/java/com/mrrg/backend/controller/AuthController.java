@@ -1,5 +1,6 @@
 package com.mrrg.backend.controller;
 
+import com.mrrg.backend.dto.ActivateAccountRequest;
 import com.mrrg.backend.dto.LoginRequest;
 import com.mrrg.backend.dto.LoginResponse;
 import com.mrrg.backend.dto.RegisterRequest;
@@ -26,5 +27,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/activate-account")
+    public ResponseEntity<LoginResponse> activateAccount(@RequestBody ActivateAccountRequest request) {
+        return ResponseEntity.ok(authService.activateAccount(request.getToken(), request.getPassword()));
     }
 }
