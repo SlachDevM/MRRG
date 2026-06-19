@@ -5,6 +5,7 @@ import Login from './pages/Login';
 import MainDashboard from './pages/MainDashboard';
 import AdminPage from './pages/AdminPage';
 import NotificationPage from './pages/NotificationPage';
+import UserManagementPage from './pages/UserManagementPage';
 import './App.css';
 
 function PrivateRoute({ children }) {
@@ -45,6 +46,14 @@ function App() {
               element={
                 <PrivateRoute>
                   <NotificationPage />
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <PrivateRoute>
+                  <UserManagementPage />
                 </PrivateRoute>
               }
             />

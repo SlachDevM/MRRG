@@ -185,6 +185,16 @@ export default function MainDashboard() {
 
           )}
 
+          {canManage && (
+
+            <button className="users-btn" onClick={() => navigate('/users')}>
+
+              👥 Users
+
+            </button>
+
+          )}
+
           <button className="logout-btn" onClick={handleLogout}>
 
             Logout
