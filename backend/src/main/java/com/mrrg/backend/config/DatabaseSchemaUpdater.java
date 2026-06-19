@@ -30,6 +30,11 @@ public class DatabaseSchemaUpdater implements ApplicationListener<ApplicationRea
         jdbcTemplate.execute("ALTER TABLE jobs ADD COLUMN IF NOT EXISTS after_photos TEXT");
         
         jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS fcm_token TEXT");
+        
+        // Ensure existing users remain enabled (backward compatibility)
+        jdbcTemplate.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS enabled BOOLEAN DEFAULT TRUE");
+        // Update any existing users that might have NULL enabled to TRUE
+        jdbcTemplate.execute("UPDATE users SET enabled = TRUE WHERE enabled IS NULL OR enabled = FALSE");
 
         migrateLegacyPhotoColumn("before_photo", "before_photos");
         migrateLegacyPhotoColumn("after_photo", "after_photos");

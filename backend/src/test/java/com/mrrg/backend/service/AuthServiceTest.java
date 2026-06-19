@@ -122,6 +122,8 @@ class AuthServiceTest {
         assertThat(savedUser.getPassword()).isEqualTo("encoded-password");
         assertThat(savedUser.getName()).isEqualTo("New User");
         assertThat(savedUser.getRole()).isEqualTo(UserRole.EMPLOYEE);
+        // New registrations via public endpoint must be activated via email (enabled = false)
+        assertThat(savedUser.getEnabled()).isFalse();
 
         assertThat(response.getToken()).isEqualTo("jwt-token");
         assertThat(response.getRole()).isEqualTo(UserRole.EMPLOYEE);

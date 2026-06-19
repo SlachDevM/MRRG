@@ -19,6 +19,9 @@ public class EmailService {
      * In development, logs the activation link instead of sending email.
      * In production, would use Spring Mail to send the actual email.
      *
+     * SECURITY: Activation tokens are NEVER logged in production environments.
+     * They are only logged in dev/development/local profiles for testing purposes.
+     *
      * @param email the recipient email
      * @param token the activation token
      * @param userName the user's name for personalization
@@ -44,12 +47,19 @@ public class EmailService {
     }
 
     private boolean isDevelopment() {
-        return "dev".equals(activeProfile) || "development".equals(activeProfile) || "local".equals(activeProfile);
+        return "dev".equalsIgnoreCase(activeProfile) 
+                || "development".equalsIgnoreCase(activeProfile) 
+                || "local".equalsIgnoreCase(activeProfile);
     }
 
+    /**
+     * Logs the activation link. This should ONLY be called in development profiles.
+     * SECURITY WARNING: This logs the activation token in plain text.
+     * This must never be used in production.
+     */
     private void logActivationLink(String email, String link, String userName) {
         log.info("═══════════════════════════════════════════════════════════════");
-        log.info("ACCOUNT ACTIVATION LINK (Development Mode)");
+        log.info("ACCOUNT ACTIVATION LINK (Development Mode Only)");
         log.info("═══════════════════════════════════════════════════════════════");
         log.info("To: {}", email);
         log.info("User: {}", userName);
@@ -61,6 +71,7 @@ public class EmailService {
     private void sendEmailViaSMTP(String email, String link, String userName) {
         // TODO: Implement Spring Mail integration for production
         // This would use JavaMailSender or similar to send actual emails
-        log.warn("Email sending not yet configured. User: {}, Email: {}", userName, email);
+        // NOTE: The actual email body with the link should be sent via SMTP, not logged
+        log.warn("Email sending not yet configured. Contact administrator. User: {}, Email: {}", userName, email);
     }
 }

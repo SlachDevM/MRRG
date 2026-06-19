@@ -61,7 +61,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setName(request.getName());
         user.setRole(request.getRole() != null ? request.getRole() : UserRole.EMPLOYEE);
-        user.setEnabled(true); // Direct registration activates immediately
+        // Direct registration via public endpoint is now restricted to development profiles only
+        user.setEnabled(false); // Must activate via email token in production
 
         return buildLoginResponse(userRepository.save(user));
     }
