@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -53,7 +54,7 @@ class JobServiceTest {
     @Test
     void create_shouldCreateScheduledJobAndNotifyWorkers_whenJobHasDateAndWorkersAndUserIsManager() {
         Job job = sampleJob();
-        job.setJobDate(1710000000000L);
+        job.setJobDate(LocalDate.of(2026, 3, 10));
         job.setJobStartHour("08:00");
         job.setAssignedWorkers("John Worker");
 
@@ -71,7 +72,7 @@ class JobServiceTest {
         Job result = jobService.create(job, 1L);
 
         assertThat(result.getStatus()).isEqualTo(JobStatus.SCHEDULED);
-        assertThat(result.getJobDate()).isEqualTo(1710000000000L);
+        assertThat(result.getJobDate()).isEqualTo(LocalDate.of(2026, 3, 10));
 
         verify(notificationService).create(
                 2L,
@@ -187,7 +188,7 @@ class JobServiceTest {
     void archive_shouldArchiveJobAndClearSchedule_whenUserIsManager() {
         Job job = sampleJob();
         job.setStatus(JobStatus.DONE);
-        job.setJobDate(1710000000000L);
+        job.setJobDate(LocalDate.of(2026, 3, 10));
         job.setJobStartHour("08:00");
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
@@ -240,7 +241,7 @@ class JobServiceTest {
         job.setStatus(JobStatus.ARCHIVED);
 
         CallbackFixRequest request = new CallbackFixRequest();
-        request.setJobDate(1710000000000L);
+        request.setJobDate(LocalDate.of(2026, 3, 10));
         request.setJobStartHour("09:30");
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
@@ -250,7 +251,7 @@ class JobServiceTest {
         Job result = jobService.callbackFix(10L, request, 1L);
 
         assertThat(result.getStatus()).isEqualTo(JobStatus.SCHEDULED);
-        assertThat(result.getJobDate()).isEqualTo(1710000000000L);
+        assertThat(result.getJobDate()).isEqualTo(LocalDate.of(2026, 3, 10));
         assertThat(result.getJobStartHour()).isEqualTo("09:30");
     }
 
@@ -260,7 +261,7 @@ class JobServiceTest {
         job.setStatus(JobStatus.DONE);
 
         CallbackFixRequest request = new CallbackFixRequest();
-        request.setJobDate(1710000000000L);
+        request.setJobDate(LocalDate.of(2026, 3, 10));
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));

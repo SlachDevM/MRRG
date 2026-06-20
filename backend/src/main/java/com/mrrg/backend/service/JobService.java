@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -65,7 +66,7 @@ public class JobService {
     }
 
     @Transactional(readOnly = true)
-    public List<Job> getScheduledJobs(Long weekStart, Long weekEnd) {
+    public List<Job> getScheduledJobs(LocalDate weekStart, LocalDate weekEnd) {
         return jobRepository.findByStatusInAndJobDateBetweenOrderByJobStartHourAsc(
                 Arrays.asList(JobStatus.SCHEDULED, JobStatus.IN_PROGRESS, JobStatus.READY_FOR_CONFIRMATION),
                 weekStart,

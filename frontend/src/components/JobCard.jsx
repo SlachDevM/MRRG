@@ -16,9 +16,12 @@ export default function JobCard({ job, onJobClick }) {
     return colors[level] || '#999';
   };
 
-  const formatDate = (timestamp) => {
-    if (!timestamp) return 'Not assigned';
-    return new Date(timestamp).toLocaleDateString();
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Not assigned';
+    // jobDate is now a string in format "yyyy-MM-dd"
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString();
   };
 
   return (

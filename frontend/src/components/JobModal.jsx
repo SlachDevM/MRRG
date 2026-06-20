@@ -10,8 +10,6 @@ import {
 } from '../constants/jobConfig';
 import {
   formatJobTypeLabel,
-  timestampToDateInput,
-  dateInputToTimestamp,
 } from '../utils/dateUtils';
 import {
   toPhotoSrc,
@@ -126,7 +124,7 @@ export default function JobModal({
     const resetForm = () => {
       setForm({
         ...EMPTY_JOB_FORM,
-        jobDate: prefilledDate ? timestampToDateInput(prefilledDate) : '',
+        jobDate: prefilledDate || '',
       });
       setSelectedTypes([]);
       setSelectedWorkers([]);
@@ -152,9 +150,7 @@ export default function JobModal({
           details: fullJob.details || '',
           notes: fullJob.notes || '',
           priorityLevel: String(fullJob.priorityLevel || 1),
-          jobDate: prefilledDate
-            ? timestampToDateInput(prefilledDate)
-            : timestampToDateInput(fullJob.jobDate),
+          jobDate: prefilledDate || fullJob.jobDate || '',
           jobStartHour: fullJob.jobStartHour || '07:50',
         });
         setSelectedTypes(fullJob.jobTypes ? fullJob.jobTypes.split(',').filter(Boolean) : []);
@@ -354,9 +350,8 @@ export default function JobModal({
       };
 
       if (canManage) {
-        const jobDate = dateInputToTimestamp(form.jobDate);
-        if (jobDate) {
-          payload.jobDate = jobDate;
+        if (form.jobDate) {
+          payload.jobDate = form.jobDate;
           payload.jobStartHour = form.jobStartHour || '07:50';
         }
         payload.assignedWorkers = selectedWorkers.join(',');
@@ -438,9 +433,8 @@ export default function JobModal({
     setCallbackFixing(true);
     try {
       const payload = {};
-      const jobDate = dateInputToTimestamp(form.jobDate);
-      if (jobDate) {
-        payload.jobDate = jobDate;
+      if (form.jobDate) {
+        payload.jobDate = form.jobDate;
         payload.jobStartHour = form.jobStartHour || '07:50';
       }
 

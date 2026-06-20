@@ -1,6 +1,8 @@
 package com.mrrg.backend.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 @Entity
@@ -27,7 +29,8 @@ public class Job {
     private JobStatus status;
 
     @Column(name = "job_date")
-    private Long jobDate;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate jobDate;
 
     @Column(name = "job_start_hour")
     private String jobStartHour;
@@ -116,11 +119,11 @@ public class Job {
         this.status = status;
     }
 
-    public Long getJobDate() {
+    public LocalDate getJobDate() {
         return jobDate;
     }
 
-    public void setJobDate(Long jobDate) {
+    public void setJobDate(LocalDate jobDate) {
         this.jobDate = jobDate;
     }
 

@@ -3,8 +3,7 @@ import { useDragClickGuard } from '../hooks/useDragClickGuard';
 import apiClient from '../services/apiClient';
 import { PRIORITY_COLORS, JOB_STATUSES, API_ENDPOINTS } from '../constants/jobConfig';
 import {
-  startOfDay,
-  endOfDay,
+  dateToISOString,
   isSameDay,
 } from '../utils/dateUtils';
 import { formatWorkers } from '../utils/permissionUtils';
@@ -76,10 +75,10 @@ export default function WeekView({
     const fetchScheduled = async () => {
       try {
         apiClient.setToken(token);
-        const weekStartMs = startOfDay(weekDays[0]);
-        const weekEndMs = endOfDay(weekEnd);
+        const weekStartDate = dateToISOString(weekDays[0]);
+        const weekEndDate = dateToISOString(weekEnd);
         const jobs = await apiClient.get(
-          `${API_ENDPOINTS.JOBS_SCHEDULED}?weekStart=${weekStartMs}&weekEnd=${weekEndMs}`
+          `${API_ENDPOINTS.JOBS_SCHEDULED}?weekStart=${weekStartDate}&weekEnd=${weekEndDate}`
         );
         setScheduledJobs(jobs);
       } catch (err) {
@@ -114,8 +113,9 @@ export default function WeekView({
 
   const scheduleJobOnDay = async (job, dayDate) => {
     try {
+      const jobDateStr = dateToISOString(dayDate);
       const updated = await apiClient.put(`${API_ENDPOINTS.JOBS}/${job.id}`, {
-        jobDate: startOfDay(dayDate),
+        jobDate: jobDateStr,
         jobStartHour: job.jobStartHour || '07:50',
         status: JOB_STATUSES.SCHEDULED,
       });

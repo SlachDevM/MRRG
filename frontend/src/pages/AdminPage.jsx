@@ -10,6 +10,13 @@ import '../styles/AdminPage.css';
 import '../styles/Dashboard.css';
 import '../styles/JobModal.css';
 
+const formatJobDate = (dateStr) => {
+  if (!dateStr) return '-';
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  return date.toLocaleDateString();
+};
+
 
 
 export default function AdminPage() {
@@ -272,7 +279,7 @@ export default function AdminPage() {
 
                       <td>{job.clientAddress}</td>
 
-                      <td>{job.jobDate ? new Date(job.jobDate).toLocaleDateString() : '-'}</td>
+                      <td>{formatJobDate(job.jobDate)}</td>
 
                       <td><span className="priority">{job.priorityLevel}</span></td>
 

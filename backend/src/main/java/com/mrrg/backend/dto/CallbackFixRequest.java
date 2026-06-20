@@ -1,14 +1,18 @@
 package com.mrrg.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.time.LocalDate;
+
 public class CallbackFixRequest {
-    private Long jobDate;
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate jobDate;
     private String jobStartHour;
 
-    public Long getJobDate() {
+    public LocalDate getJobDate() {
         return jobDate;
     }
 
-    public void setJobDate(Long jobDate) {
+    public void setJobDate(LocalDate jobDate) {
         this.jobDate = jobDate;
     }
 

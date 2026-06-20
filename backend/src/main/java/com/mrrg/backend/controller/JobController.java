@@ -48,10 +48,12 @@ public class JobController {
 
     @GetMapping("/scheduled")
     public ResponseEntity<List<Job>> getScheduledJobs(
-            @RequestParam("weekStart") Long weekStart,
-            @RequestParam("weekEnd") Long weekEnd,
+            @RequestParam("weekStart") String weekStart,
+            @RequestParam("weekEnd") String weekEnd,
             Authentication authentication) {
-        return ResponseEntity.ok(jobService.getScheduledJobs(weekStart, weekEnd));
+        java.time.LocalDate start = java.time.LocalDate.parse(weekStart);
+        java.time.LocalDate end = java.time.LocalDate.parse(weekEnd);
+        return ResponseEntity.ok(jobService.getScheduledJobs(start, end));
     }
 
     @GetMapping("/{id}")
