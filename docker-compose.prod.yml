@@ -26,6 +26,9 @@ services:
       # Hibernate
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       
+      # JWT
+      JWT_SECRET: ${JWT_SECRET}
+      
       # Firebase
       FIREBASE_SERVICE_ACCOUNT_PATH: ${FIREBASE_SERVICE_ACCOUNT_PATH}
       
