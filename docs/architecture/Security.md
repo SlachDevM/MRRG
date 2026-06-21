@@ -16,7 +16,7 @@ MRRG uses JWT authentication for both client applications.
 
 After a successful login, the backend issues a JSON Web Token that is included in subsequent requests.
 
-Authentication is shared across the React web application and the Android application, providing a consistent security model regardless of the client being used.
+The same authentication mechanism is used by both the React web application and the Android application, providing a consistent security model regardless of the client being used.
 
 ---
 
@@ -34,7 +34,7 @@ Because authorization is enforced centrally, business behaviour remains identica
 
 User accounts are managed exclusively by administrators.
 
-There is no public registration process.
+There is no public registration process. Every account is created as part of an administrative business process.
 
 New users follow the activation workflow below.
 
