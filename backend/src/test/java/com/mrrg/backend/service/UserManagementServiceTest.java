@@ -275,7 +275,7 @@ class UserManagementServiceTest {
     }
 
     @Test
-    void reactivateUser_shouldThrowForNeverActivatedUser() {
+    void reactivateUser_shouldRestorePendingActivationForNeverActivatedUser() {
         User admin = new User("admin@test.com", "password", "Admin", UserRole.ADMIN);
         admin.setId(1L);
 
@@ -286,10 +286,18 @@ class UserManagementServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(neverActivated));
         when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.findUnusedByUserId(2L)).thenReturn(new ArrayList<>());
+        when(tokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
-        assertThatThrownBy(() -> userManagementService.reactivateUser(2L, 1L))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_REQUEST);
+        userManagementService.reactivateUser(2L, 1L);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertThat(userCaptor.getValue().getEnabled()).isFalse();
+
+        verify(tokenRepository).save(any(AccountActivationToken.class));
+        verify(emailService).sendActivationEmail(eq("user@test.com"), anyString(), eq("User"));
     }
 
     @Test

@@ -242,13 +242,15 @@ public class UserManagementService {
      * For a DISABLED user who was previously ACTIVE:
      * - Sets enabled=true → status becomes ACTIVE
      *
-     * For a DISABLED user who was previously PENDING (deactivated before ever activating):
-     * - Do NOT set enabled=true
-     * - Instead, reject and suggest using resend-activation
-     * - This preserves the pending activation flow
+     * For a DISABLED user who never completed activation:
+     * - Issues a new activation token and email
+     * - Keeps enabled=false → status becomes PENDING_ACTIVATION
      *
      * For an ACTIVE user:
      * - Throws error (already active)
+     *
+     * For a PENDING_ACTIVATION user:
+     * - Throws error (still pending, not disabled)
      *
      * @param userId the user to reactivate
      * @param requestingAdminId the ID of the admin making the request
@@ -272,32 +274,18 @@ public class UserManagementService {
         }
 
         if (currentStatus == UserStatus.PENDING_ACTIVATION) {
-            // User never activated (still has valid token)
-            // Do not silently activate them
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cannot reactivate a pending user without activation. Use resend-activation instead.");
         }
 
-        // currentStatus == DISABLED (enabled=false and no valid tokens)
-        // This could be from:
-        // 1. Admin deactivated an active user
-        // 2. Admin deactivated a pending user (before reactivating)
-        // 
-        // For case 1: set enabled=true to restore to ACTIVE
-        // For case 2: need to check if user has a password (was ever activated)
-        //
-        // If user has empty password, they never activated, so we need resend-activation
-        // If user has a password, they were previously activated, so we can reactivate them
-
         if (!user.hasActivatedAccount()) {
-            // User never set a password (never completed activation)
-            // This is a deactivated-pending user
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, 
-                    "This user never completed activation. Use resend-activation instead.");
+            issueActivationToken(user);
+            user.setUpdatedAt(System.currentTimeMillis());
+            userRepository.save(user);
+            log.info("User {} reactivated to pending activation by admin {}", userId, requestingAdminId);
+            return;
         }
 
-        // User has a password, so they were previously active
-        // Safe to reactivate
         user.setEnabled(true);
         user.setUpdatedAt(System.currentTimeMillis());
         userRepository.save(user);
@@ -340,22 +328,24 @@ public class UserManagementService {
         }
 
         // Invalidate old tokens
-        List<AccountActivationToken> oldTokens = tokenRepository.findUnusedByUserId(userId);
+        issueActivationToken(user);
+
+        log.info("Activation link resent for user {} by admin {}", userId, requestingAdminId);
+    }
+
+    private void issueActivationToken(User user) {
+        List<AccountActivationToken> oldTokens = tokenRepository.findUnusedByUserId(user.getId());
         oldTokens.forEach(t -> t.setUsedAt(System.currentTimeMillis()));
         tokenRepository.saveAll(oldTokens);
 
-        // Generate and send new activation link
         String newToken = generateSecureToken();
-        long expirationTime = System.currentTimeMillis() + (24 * 60 * 60 * 1000); // 24 hours
         AccountActivationToken activationToken = new AccountActivationToken(
                 newToken,
                 user,
-                expirationTime
+                System.currentTimeMillis() + (24 * 60 * 60 * 1000)
         );
         tokenRepository.save(activationToken);
         emailService.sendActivationEmail(user.getEmail(), newToken, user.getName());
-
-        log.info("Activation link resent for user {} by admin {}", userId, requestingAdminId);
     }
 
     /**

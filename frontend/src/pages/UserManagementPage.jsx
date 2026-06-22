@@ -137,11 +137,7 @@ export default function UserManagementPage() {
         );
       } else if (confirmAction === 'reactivate') {
         await userApi.reactivateUser(confirmingUserId);
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === confirmingUserId ? { ...u, status: 'ACTIVE' } : u
-          )
-        );
+        await fetchUsers();
       } else if (confirmAction === 'resend') {
         await userApi.resendActivation(confirmingUserId);
         setUsers((prev) =>
@@ -177,7 +173,7 @@ export default function UserManagementPage() {
     if (confirmAction === 'deactivate') {
       return 'Are you sure you want to deactivate this user? They will not be able to log in.';
     } else if (confirmAction === 'reactivate') {
-      return 'Reactivate this user? They will be able to log in again.';
+      return 'Reactivate this user?';
     } else if (confirmAction === 'resend') {
       return 'Send a new activation link to this user?';
     }
