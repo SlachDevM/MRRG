@@ -18,6 +18,8 @@ Employees cannot register themselves.
 
 Each new account is created by an administrator and remains in the `PENDING_ACTIVATION` state until the employee completes the account activation process from the Android application.
 
+Disabling a user automatically removes them from all non-final jobs and from the list of assignable workers. Their assignments are preserved on completed and archived jobs to maintain an accurate historical record.
+
 Administrators can:
 
 * create new users;
@@ -36,7 +38,9 @@ Jobs are created and scheduled through the management interface.
 
 Scheduling consists of assigning the appropriate employee, selecting the planned work date and defining the expected working period.
 
-Once scheduled, the assigned employee automatically receives the job through the Android application.
+Once scheduled, the assigned employee automatically receives the job through the Android application. 
+
+A job can be scheduled without assigning any employee. This allows managers to reserve a time slot before deciding which member(s) of the team will perform the work.
 
 Managers may reschedule jobs whenever operational requirements change.
 
@@ -71,6 +75,11 @@ Completed
 
 Archived
 ```
+The workflow is primarily driven by field operations:
+
+- uploading the first before photo starts the job (Scheduled → In Progress);
+- adding notes never changes the job status;
+- at least one after photo is required before the job can be submitted for manager validation;
 
 Each status represents a business milestone and ensures that work progresses in a controlled and predictable manner.
 
@@ -82,7 +91,7 @@ Each stage reflects the current operational state of the job and helps ensure co
 
 ## Validating Completed Work
 
-After completing a job, field workers upload the required photographs and submit the work for validation.
+Once the work is finished, they upload one or more after photos and explicitly submit the job for manager validation.
 
 Managers review the submitted information before marking the job as completed.
 
@@ -105,6 +114,8 @@ Completed jobs first appear in the Done Jobs section. Once the work has been rev
 Archived jobs remain available for historical reference and can be restored whenever additional work or customer callbacks are required.
 
 Restoring a job preserves the complete history of the original work while allowing managers to continue the workflow without creating duplicate records.
+
+When a callback is created, all assigned workers are automatically removed. This allows managers to assign the most appropriate employee(s) for the follow-up work instead of automatically notifying the original team.
 
 <img width="2844" height="942" alt="image" src="https://github.com/user-attachments/assets/61bc3bf1-d713-428e-81d8-8512f626d9ba" />
 <img width="1256" height="600" alt="image" src="https://github.com/user-attachments/assets/1c3a538f-637c-4c73-b933-fcd920f04167" />
