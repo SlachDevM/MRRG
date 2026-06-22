@@ -111,7 +111,11 @@ REST API
 
    ↓
 
-Business Rules
+Authentication & Authorization
+
+   ↓
+
+Business Validation
 
    ↓
 
@@ -139,11 +143,11 @@ Business Event
 
 ↓
 
-Backend
+Backend Business Logic
 
 ↓
 
-Save Notification
+Persist Notification
 
 ↓
 
@@ -171,3 +175,4 @@ The architecture is guided by a small number of principles.
 - Push notifications are persisted before delivery.
 - Business behaviour remains identical regardless of the client being used.
 - Client applications never become sources of business truth.
+- Stable identifiers are used internally for relationships and permissions rather than mutable display values.
