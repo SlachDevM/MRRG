@@ -24,7 +24,7 @@ After activation, the application can be accessed using the assigned email addre
 
 ## Dashboard
 
-The dashboard displays assigned work, grouped by day..
+The dashboard displays assigned work, grouped by day.
 
 Jobs are grouped by day and include the information required before arriving on site, including:
 
@@ -97,7 +97,7 @@ Before photos document the initial condition of the work site and must be captur
 
 After photos document the completed work and are required before the job can be submitted for manager validation.
 
-These images are attached to the job and reviewed during manager validation.
+These photographs are attached to the job and reviewed by the manager during the validation process.
 
 Clear photographs help managers validate completed work more efficiently.
 
@@ -147,10 +147,10 @@ The Settings section provides access to application preferences and application 
 For the best experience:
 
 - synchronize regularly when an internet connection is available;
-- capture clear before and after photographs;
 - review job information before travelling to site;
-- submit completed work promptly;
-- keep notifications enabled to receive scheduling updates;
-- keep the application up to date;
 - capture at least one before photo before starting work;
+- capture clear before and after photographs;
 - upload one or more after photos before submitting a job for validation;
+- submit completed work promptly;
+- keep notifications enabled to receive important updates;
+- keep the application up to date;
