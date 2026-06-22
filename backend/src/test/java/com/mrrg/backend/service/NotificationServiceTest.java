@@ -2,7 +2,10 @@ package com.mrrg.backend.service;
 
 import com.mrrg.backend.model.Notification;
 import com.mrrg.backend.model.NotificationType;
+import com.mrrg.backend.model.User;
+import com.mrrg.backend.model.UserRole;
 import com.mrrg.backend.repository.NotificationRepository;
+import com.mrrg.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,12 +26,31 @@ class NotificationServiceTest {
     @Mock
     private NotificationRepository notificationRepository;
 
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private FirebaseNotificationService firebaseNotificationService;
+
     @InjectMocks
     private NotificationService notificationService;
 
     @Test
+    void getUserNotifications_shouldReturnNotificationsForUser() {
+        User user = userWithId(1L);
+        Notification notification = new Notification(user, 100L, NotificationType.JOB_ASSIGNED, "Assigned");
+
+        when(notificationRepository.findByUser_IdOrderByCreatedAtDesc(1L)).thenReturn(List.of(notification));
+
+        List<Notification> result = notificationService.getUserNotifications(1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getUserId()).isEqualTo(1L);
+    }
+
+    @Test
     void getUnreadCount_shouldReturnRepositoryCount() {
-        when(notificationRepository.countByUserIdAndIsReadFalse(1L)).thenReturn(3L);
+        when(notificationRepository.countByUser_IdAndIsReadFalse(1L)).thenReturn(3L);
 
         long count = notificationService.getUnreadCount(1L);
 
@@ -38,7 +60,7 @@ class NotificationServiceTest {
     @Test
     void markAsRead_shouldSetNotificationAsRead() {
         Notification notification = new Notification(
-                1L,
+                userWithId(1L),
                 100L,
                 NotificationType.JOB_ASSIGNED,
                 "Job assigned"
@@ -65,7 +87,11 @@ class NotificationServiceTest {
     }
 
     @Test
-    void create_shouldCreateUnreadNotification() {
+    void create_shouldCreateUnreadNotificationWithUserReference() {
+        User user = userWithId(1L);
+
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(notificationRepository.save(any(Notification.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -81,21 +107,24 @@ class NotificationServiceTest {
 
         Notification saved = captor.getValue();
 
+        assertThat(saved.getUser()).isSameAs(user);
         assertThat(saved.getUserId()).isEqualTo(1L);
         assertThat(saved.getJobId()).isEqualTo(100L);
         assertThat(saved.getType()).isEqualTo(NotificationType.JOB_ASSIGNED);
         assertThat(saved.getMessage()).isEqualTo("You have been assigned");
         assertThat(saved.getIsRead()).isFalse();
 
+        assertThat(result.getUserId()).isEqualTo(1L);
         assertThat(result.getIsRead()).isFalse();
     }
 
     @Test
     void markAllAsRead_shouldMarkEveryUnreadNotificationAsRead() {
-        Notification first = new Notification(1L, 100L, NotificationType.JOB_ASSIGNED, "First");
-        Notification second = new Notification(1L, 101L, NotificationType.JOB_RESCHEDULED, "Second");
+        User user = userWithId(1L);
+        Notification first = new Notification(user, 100L, NotificationType.JOB_ASSIGNED, "First");
+        Notification second = new Notification(user, 101L, NotificationType.JOB_RESCHEDULED, "Second");
 
-        when(notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(1L))
+        when(notificationRepository.findByUser_IdAndIsReadFalseOrderByCreatedAtDesc(1L))
                 .thenReturn(List.of(first, second));
 
         notificationService.markAllAsRead(1L);
@@ -104,5 +133,11 @@ class NotificationServiceTest {
         assertThat(second.getIsRead()).isTrue();
 
         verify(notificationRepository).saveAll(List.of(first, second));
+    }
+
+    private User userWithId(long id) {
+        User user = new User("user@test.com", "password", "User", UserRole.EMPLOYEE);
+        user.setId(id);
+        return user;
     }
 }

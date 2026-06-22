@@ -1,5 +1,6 @@
 package com.mrrg.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -9,8 +10,10 @@ public class Notification {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
+    private User user;
 
     @Column(name = "job_id", nullable = false)
     private Long jobId;
@@ -33,8 +36,8 @@ public class Notification {
         this.createdAt = System.currentTimeMillis();
     }
 
-    public Notification(Long userId, Long jobId, NotificationType type, String message) {
-        this.userId = userId;
+    public Notification(User user, Long jobId, NotificationType type, String message) {
+        this.user = user;
         this.jobId = jobId;
         this.type = type;
         this.message = message;
@@ -50,12 +53,17 @@ public class Notification {
         this.id = id;
     }
 
-    public Long getUserId() {
-        return userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    @JsonIgnore
+    public User getUser() {
+        return user;
+    }
+
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
     }
 
     public Long getJobId() {

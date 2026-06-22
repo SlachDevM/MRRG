@@ -1,7 +1,5 @@
 package com.mrrg.backend.service;
 
-import com.google.firebase.messaging.FirebaseMessaging;
-import com.google.firebase.messaging.Message;
 import com.mrrg.backend.model.Notification;
 import com.mrrg.backend.model.NotificationType;
 import com.mrrg.backend.model.User;
@@ -38,13 +36,13 @@ class NotificationServiceFcmIntegrationTest {
 
     @Test
     void create_shouldPersistNotificationAndSendFcm() {
-        User user = new User("user@test.com", "password", "Test User", UserRole.EMPLOYEE);
-        user.setId(1L);
+        User user = userWithId(1L);
         user.setFcmToken("valid-fcm-token");
 
-        Notification notification = new Notification(1L, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
+        Notification notification = new Notification(user, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
         notification.setId(1L);
 
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
@@ -52,22 +50,24 @@ class NotificationServiceFcmIntegrationTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
+        assertThat(result.getUserId()).isEqualTo(1L);
         assertThat(result.getMessage()).isEqualTo("You have a new job");
 
         verify(notificationRepository).save(any(Notification.class));
+        verify(userRepository).getReferenceById(1L);
         verify(userRepository).findById(1L);
         verify(firebaseNotificationService).sendToUser(eq(user), anyString(), anyString(), anyMap());
     }
 
     @Test
     void create_shouldPersistNotificationEvenIfFcmFails() {
-        User user = new User("user@test.com", "password", "Test User", UserRole.EMPLOYEE);
-        user.setId(1L);
+        User user = userWithId(1L);
         user.setFcmToken("valid-fcm-token");
 
-        Notification notification = new Notification(1L, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
+        Notification notification = new Notification(user, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
         notification.setId(1L);
 
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         doThrow(new RuntimeException("Firebase error")).when(firebaseNotificationService).sendToUser(any(User.class), anyString(), anyString(), anyMap());
@@ -83,15 +83,18 @@ class NotificationServiceFcmIntegrationTest {
 
     @Test
     void create_shouldSkipFcmIfUserNotFound() {
-        Notification notification = new Notification(1L, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
+        User userReference = userWithId(1L);
+        Notification notification = new Notification(userReference, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
         notification.setId(1L);
 
+        when(userRepository.getReferenceById(1L)).thenReturn(userReference);
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
 
         Notification result = notificationService.create(1L, 100L, NotificationType.JOB_ASSIGNED, "You have a new job");
 
         assertThat(result).isNotNull();
+        assertThat(result.getUserId()).isEqualTo(1L);
 
         verify(notificationRepository).save(any(Notification.class));
         verify(firebaseNotificationService, never()).sendToUser(any(User.class), anyString(), anyString(), anyMap());
@@ -99,13 +102,13 @@ class NotificationServiceFcmIntegrationTest {
 
     @Test
     void create_shouldIncludeJobIdInDataPayload() {
-        User user = new User("user@test.com", "password", "Test User", UserRole.EMPLOYEE);
-        user.setId(1L);
+        User user = userWithId(1L);
         user.setFcmToken("valid-fcm-token");
 
-        Notification notification = new Notification(1L, 100L, NotificationType.JOB_READY_FOR_CONFIRMATION, "Job ready for confirmation");
+        Notification notification = new Notification(user, 100L, NotificationType.JOB_READY_FOR_CONFIRMATION, "Job ready for confirmation");
         notification.setId(2L);
 
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
         when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
@@ -123,14 +126,14 @@ class NotificationServiceFcmIntegrationTest {
 
     @Test
     void create_shouldGenerateProperTitleForEachNotificationType() {
-        User user = new User("user@test.com", "password", "Test User", UserRole.EMPLOYEE);
-        user.setId(1L);
+        User user = userWithId(1L);
         user.setFcmToken("valid-fcm-token");
 
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
 
         for (NotificationType type : NotificationType.values()) {
-            Notification notification = new Notification(1L, 100L, type, "Message for " + type);
+            Notification notification = new Notification(user, 100L, type, "Message for " + type);
             notification.setId((long) type.ordinal());
 
             when(notificationRepository.save(any(Notification.class))).thenReturn(notification);
@@ -142,5 +145,11 @@ class NotificationServiceFcmIntegrationTest {
 
             assertThat(titleCaptor.getValue()).isNotBlank();
         }
+    }
+
+    private User userWithId(long id) {
+        User user = new User("user@test.com", "password", "Test User", UserRole.EMPLOYEE);
+        user.setId(id);
+        return user;
     }
 }

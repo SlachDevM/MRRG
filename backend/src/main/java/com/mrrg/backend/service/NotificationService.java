@@ -32,17 +32,17 @@ public class NotificationService {
 
     public List<Notification> getUserNotifications(Long userId) {
         return notificationRepository
-                .findByUserIdOrderByCreatedAtDesc(userId);
+                .findByUser_IdOrderByCreatedAtDesc(userId);
     }
 
     public List<Notification> getUnreadNotifications(Long userId) {
         return notificationRepository
-                .findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
+                .findByUser_IdAndIsReadFalseOrderByCreatedAtDesc(userId);
     }
 
     public long getUnreadCount(Long userId) {
         return notificationRepository
-                .countByUserIdAndIsReadFalse(userId);
+                .countByUser_IdAndIsReadFalse(userId);
     }
 
     public Notification markAsRead(Long notificationId) {
@@ -70,14 +70,14 @@ public class NotificationService {
             NotificationType type,
             String message
     ) {
-        Notification notification =
-                new Notification(userId, jobId, type, message);
+        User user = userRepository.getReferenceById(userId);
+        Notification notification = new Notification(user, jobId, type, message);
 
         Notification savedNotification = notificationRepository.save(notification);
 
         try {
-            User user = userRepository.findById(userId).orElse(null);
-            if (user != null) {
+            User userForFcm = userRepository.findById(userId).orElse(null);
+            if (userForFcm != null) {
                 Map<String, String> data = new HashMap<>();
                 data.put("notificationId", String.valueOf(savedNotification.getId()));
                 data.put("notificationType", type.toString());
@@ -86,7 +86,7 @@ public class NotificationService {
                 }
 
                 String title = generateTitle(type);
-                firebaseNotificationService.sendToUser(user, title, message, data);
+                firebaseNotificationService.sendToUser(userForFcm, title, message, data);
             }
         } catch (Exception e) {
             // Log error but do not throw - notification must be persisted even if FCM fails
