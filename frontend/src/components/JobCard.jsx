@@ -1,4 +1,5 @@
 import { useDragClickGuard } from '../hooks/useDragClickGuard';
+import { formatWorkers } from '../utils/permissionUtils';
 import '../styles/JobCard.css';
 
 export default function JobCard({ job, onJobClick }) {
@@ -46,8 +47,8 @@ export default function JobCard({ job, onJobClick }) {
         <p><strong>Date:</strong> {formatDate(job.jobDate)}</p>
         <p><strong>Time:</strong> {job.jobStartHour || 'Not set'}</p>
         {job.details && <p><strong>Details:</strong> {job.details}</p>}
-        {job.assignedWorkerDetails && job.assignedWorkerDetails.length > 0 && (
-          <p><strong>Workers:</strong> {job.assignedWorkerDetails.map(w => w.name).join(', ')}</p>
+        {(job.assignedWorkerDetails?.length > 0 || job.assignedWorkers?.trim()) && (
+          <p><strong>Workers:</strong> {formatWorkers(job)}</p>
         )}
       </div>
     </div>

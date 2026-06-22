@@ -31,7 +31,19 @@ export function getJobPermissions(job, user, isAssignedWorker) {
   };
 }
 
-export function formatWorkers(assignedWorkers) {
+export function formatWorkers(jobOrAssignedWorkers) {
+  if (jobOrAssignedWorkers && typeof jobOrAssignedWorkers === 'object') {
+    const job = jobOrAssignedWorkers;
+    if (job.assignedWorkerDetails?.length > 0) {
+      return job.assignedWorkerDetails.map((worker) => worker.name).join(', ');
+    }
+    if (!job.assignedWorkers?.trim()) {
+      return 'No workers assigned';
+    }
+    return job.assignedWorkers.split(',').filter(Boolean).join(', ');
+  }
+
+  const assignedWorkers = jobOrAssignedWorkers;
   if (!assignedWorkers || !assignedWorkers.trim()) {
     return 'No workers assigned';
   }

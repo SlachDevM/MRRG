@@ -41,7 +41,7 @@ function ScheduledJobChip({ job, onJobClick, onDragStartRef, getPriorityColor })
       )}
       <span className="chip-name">{job.clientName}</span>
       <span className="chip-address">{job.clientAddress}</span>
-      <span className="chip-workers">{formatWorkers(job.assignedWorkers)}</span>
+      <span className="chip-workers">{formatWorkers(job)}</span>
     </div>
   );
 }

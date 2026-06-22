@@ -19,7 +19,7 @@ import {
   photosToPayload,
   sanitizeClientName,
 } from '../utils/photoUtils';
-import { getJobPermissions, formatWorkers } from '../utils/permissionUtils';
+import { getJobPermissions } from '../utils/permissionUtils';
 
 function PhotoGallery({ title, photoType, photos, canUpload, onUpload, onDelete, onDownload }) {
   return (
