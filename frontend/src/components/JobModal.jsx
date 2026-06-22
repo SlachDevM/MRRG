@@ -21,10 +21,11 @@ import {
 } from '../utils/photoUtils';
 import { getJobPermissions } from '../utils/permissionUtils';
 
-function PhotoGallery({ title, photoType, photos, canUpload, onUpload, onDelete, onDownload }) {
+function PhotoGallery({ title, photoType, photos, canUpload, uploadHint, onUpload, onDelete, onDownload }) {
   return (
     <div className="photo-group">
       <p className="photo-group-label">{title}</p>
+      {uploadHint && <p className="job-modal-hint">{uploadHint}</p>}
       {photos.length > 0 && (
         <div className="photo-grid">
           {photos.map((photo, index) => (
@@ -199,6 +200,11 @@ export default function JobModal({
     canConfirm,
     canArchive,
   } = permissions;
+  const canUploadAfterPhotos = canUploadPhotos && beforePhotos.length > 0;
+  const afterPhotoUploadHint =
+    canUploadPhotos && beforePhotos.length === 0
+      ? 'Add a before photo before adding after photos.'
+      : null;
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -662,7 +668,8 @@ export default function JobModal({
                   title="After Photos"
                   photoType="after"
                   photos={afterPhotos}
-                  canUpload={canUploadPhotos}
+                  canUpload={canUploadAfterPhotos}
+                  uploadHint={afterPhotoUploadHint}
                   onUpload={(e) => handlePhotoChange(e, 'after')}
                   onDelete={(index) => handleDeletePhoto('after', index)}
                   onDownload={downloadPhoto}
