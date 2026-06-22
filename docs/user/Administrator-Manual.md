@@ -16,7 +16,7 @@ Administrators are responsible for creating and maintaining user accounts.
 
 Employees cannot register themselves.
 
-Each new account is created by an administrator and remains in the `PENDING_ACTIVATION` state until the employee completes the account activation process from the Android application.
+Each new account is created by an administrator and remains in the `PENDING_ACTIVATION` state until the employee completes the account activation process using the activation link received by email.
 
 Disabling a user automatically removes them from all non-final jobs and from the list of assignable workers. Their assignments are preserved on completed and archived jobs to maintain an accurate historical record.
 
@@ -38,9 +38,11 @@ Jobs are created and scheduled through the management interface.
 
 Scheduling consists of assigning the appropriate employee, selecting the planned work date and defining the expected working period.
 
-Once scheduled, the assigned employee automatically receives the job through the Android application. 
+Once scheduled, assigned employees automatically receive the job through the Android application.
 
 A job can be scheduled without assigning any employee. This allows managers to reserve a time slot before deciding which member(s) of the team will perform the work.
+
+Managers may assign one or several employees to the same job depending on operational requirements. Assigned workers can be changed at any time while the job remains active.
 
 Managers may reschedule jobs whenever operational requirements change.
 
@@ -75,11 +77,14 @@ Completed
 
 Archived
 ```
+
 The workflow is primarily driven by field operations:
 
 - uploading the first before photo starts the job (Scheduled → In Progress);
 - adding notes never changes the job status;
 - at least one after photo is required before the job can be submitted for manager validation;
+
+After photos cannot be uploaded until at least one before photo has been added.
 
 Each status represents a business milestone and ensures that work progresses in a controlled and predictable manner.
 
@@ -151,5 +156,6 @@ To maintain accurate operational records:
 * restore archived jobs for callbacks instead of creating new jobs;
 * keep user information up to date;
 * keep job information accurate and up to date;
+* review callback jobs before assigning workers;
 
 Following these practices helps maintain accurate business records, improves operational consistency and ensures reliable historical data for future reference.
