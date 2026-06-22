@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 import Login from './pages/Login';
+import ActivateAccount from './pages/ActivateAccount';
 import MainDashboard from './pages/MainDashboard';
 import AdminPage from './pages/AdminPage';
 import NotificationPage from './pages/NotificationPage';
@@ -25,6 +26,7 @@ function App() {
         <NotificationProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/activate-account" element={<ActivateAccount />} />
             <Route
               path="/"
               element={

@@ -19,7 +19,7 @@ services:
       - SPRING_MAIL_PASSWORD=
       - SPRING_MAIL_FROM=noreply@mrrg.local
       - FRONTEND_ORIGIN=http://localhost:3000
-      - ACTIVATION_LINK_BASE_URL=mrrg://activate-account
+      - ACTIVATION_LINK_BASE_URL=http://localhost:3000/activate-account
       - SPRING_PROFILES_ACTIVE=prod
     volumes:
       - ./backend/firebase-service-account.json:/app/firebase-service-account.json:ro
