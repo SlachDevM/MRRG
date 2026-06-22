@@ -24,7 +24,7 @@ After activation, the application can be accessed using the assigned email addre
 
 ## Dashboard
 
-The dashboard displays assigned work, grouped by day.
+The dashboard displays assigned work grouped by day, allowing workers to quickly review their upcoming schedule.
 
 Jobs are grouped by day and include the information required before arriving on site, including:
 
@@ -79,7 +79,7 @@ Workers begin the job by uploading at least one before photo, which automaticall
 
 During the work they may add notes whenever necessary. Notes provide additional information but do not affect the job status.
 
-Once the work has been completed, workers upload one or more after photos before submitting the job for manager validation.
+Once the work has been completed, workers upload at least one after photo before submitting the job for manager validation.
 
 <img width="370" height="136" alt="image" src="https://github.com/user-attachments/assets/f94c3f96-330b-43c8-91f2-281407b59456" />
 <img width="436" height="904" alt="image" src="https://github.com/user-attachments/assets/d129c94b-bbd1-45e6-8f08-3498ab5281ef" />
@@ -95,7 +95,7 @@ Photographs provide a visual record of both the work site's initial condition an
 
 Before photos document the initial condition of the work site and must be captured before work begins. Uploading the first before photo automatically starts the job.
 
-After photos document the completed work and are required before the job can be submitted for manager validation.
+After photos document the completed work and are required before the job can be submitted for manager validation. After photos cannot be uploaded until at least one before photo has been added.
 
 These photographs are attached to the job and reviewed by the manager during the validation process.
 
@@ -148,9 +148,9 @@ For the best experience:
 
 - synchronize regularly when an internet connection is available;
 - review job information before travelling to site;
-- capture at least one before photo before starting work;
+- start each job by capturing at least one before photo;
 - capture clear before and after photographs;
-- upload one or more after photos before submitting a job for validation;
+- upload at least one after photo before submitting a job for validation;
 - submit completed work promptly;
 - keep notifications enabled to receive important updates;
 - keep the application up to date;
