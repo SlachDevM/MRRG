@@ -6,6 +6,7 @@ import com.mrrg.backend.model.JobStatus;
 import com.mrrg.backend.model.NotificationType;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.model.UserRole;
+import com.mrrg.backend.model.UserStatus;
 import com.mrrg.backend.repository.JobRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +37,9 @@ class JobServiceTest {
     @Mock
     private com.mrrg.backend.repository.UserRepository userRepository;
 
+    @Mock
+    private UserManagementService userManagementService;
+
     @InjectMocks
     private JobService jobService;
 
@@ -45,6 +49,7 @@ class JobServiceTest {
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(userManagementService.computeStatus(any(User.class))).thenReturn(UserStatus.ACTIVE);
 
         Job result = jobService.create(job, 1L);
 
@@ -71,6 +76,7 @@ class JobServiceTest {
             return savedJob;
         });
         when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
 
         Job result = jobService.create(job, 1L);
 
@@ -158,6 +164,7 @@ class JobServiceTest {
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(jobRepository.save(job)).thenReturn(job);
         when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
 
         Job result = jobService.markDone(10L, 1L);
 
@@ -323,6 +330,7 @@ class JobServiceTest {
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(jobRepository.save(job)).thenReturn(job);
         when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
 
         Job result = jobService.assignWorkers(10L, "2", 1L);
 
@@ -563,5 +571,136 @@ class JobServiceTest {
         assertThat(job.isWorkerAssigned(3L)).isTrue();
         // Even though name changed
         assertThat(worker.getName()).isEqualTo("John Smith Jr.");
+    }
+
+    @Test
+    void assignWorkers_shouldRejectDisabledUser() {
+        User disabledWorker = new User("worker@test.com", "password", "Disabled Worker", UserRole.EMPLOYEE);
+        disabledWorker.setId(2L);
+        disabledWorker.setEnabled(false);
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(disabledWorker));
+        when(userManagementService.computeStatus(disabledWorker)).thenReturn(UserStatus.DISABLED);
+
+        assertThatThrownBy(() -> jobService.assignWorkers(10L, "2", 1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Disabled users cannot be assigned");
+
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void assignWorkers_shouldRejectPendingActivationUser() {
+        User pendingWorker = new User("worker@test.com", "", "Pending Worker", UserRole.EMPLOYEE);
+        pendingWorker.setId(2L);
+        pendingWorker.setEnabled(false);
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(pendingWorker));
+        when(userManagementService.computeStatus(pendingWorker)).thenReturn(UserStatus.PENDING_ACTIVATION);
+
+        assertThatThrownBy(() -> jobService.assignWorkers(10L, "2", 1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Pending activation users cannot be assigned");
+
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void assignWorkers_shouldRejectNonExistingUser() {
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> jobService.assignWorkers(10L, "99", 1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Worker not found");
+
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void assignWorkers_shouldAllowEmptyWorkers() {
+        Job job = sampleJob();
+        job.setId(10L);
+        job.setStatus(JobStatus.SCHEDULED);
+        job.setJobDate(LocalDate.of(2026, 3, 10));
+        job.setAssignedWorkers("2");
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+
+        Job result = jobService.assignWorkers(10L, "", 1L);
+
+        assertThat(result.getAssignedWorkers()).isEmpty();
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
+    }
+
+    @Test
+    void removeUserFromNonFinalJobs_shouldRemoveUserFromScheduledJob() {
+        Job scheduledJob = sampleJob();
+        scheduledJob.setId(10L);
+        scheduledJob.setStatus(JobStatus.SCHEDULED);
+        scheduledJob.setJobDate(LocalDate.of(2026, 3, 10));
+        scheduledJob.setAssignedWorkers("2,3");
+
+        when(jobRepository.findByStatusInOrderByPriorityLevelDesc(anyList()))
+                .thenReturn(List.of(scheduledJob));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        jobService.removeUserFromNonFinalJobs(2L);
+
+        assertThat(scheduledJob.getAssignedWorkers()).isEqualTo("3");
+        assertThat(scheduledJob.getStatus()).isEqualTo(JobStatus.SCHEDULED);
+        assertThat(scheduledJob.getJobDate()).isEqualTo(LocalDate.of(2026, 3, 10));
+        verify(jobRepository).save(scheduledJob);
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
+    }
+
+    @Test
+    void removeUserFromNonFinalJobs_shouldLeaveJobEmptyWhenOnlyWorker() {
+        Job scheduledJob = sampleJob();
+        scheduledJob.setId(10L);
+        scheduledJob.setStatus(JobStatus.SCHEDULED);
+        scheduledJob.setJobDate(LocalDate.of(2026, 3, 10));
+        scheduledJob.setAssignedWorkers("2");
+
+        when(jobRepository.findByStatusInOrderByPriorityLevelDesc(anyList()))
+                .thenReturn(List.of(scheduledJob));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        jobService.removeUserFromNonFinalJobs(2L);
+
+        assertThat(scheduledJob.getAssignedWorkers()).isNull();
+        assertThat(scheduledJob.getStatus()).isEqualTo(JobStatus.SCHEDULED);
+        verify(jobRepository).save(scheduledJob);
+    }
+
+    @Test
+    void assignWorkers_shouldRejectNonWorkerRole() {
+        User adminWorker = new User("admin@test.com", "password", "Admin User", UserRole.ADMIN);
+        adminWorker.setId(5L);
+        adminWorker.setEnabled(true);
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(5L)).thenReturn(Optional.of(adminWorker));
+        when(userManagementService.computeStatus(adminWorker)).thenReturn(UserStatus.ACTIVE);
+
+        assertThatThrownBy(() -> jobService.assignWorkers(10L, "5", 1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("User cannot be assigned as a worker");
+
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void removeUserFromNonFinalJobs_shouldNotModifyDoneJobs() {
+        when(jobRepository.findByStatusInOrderByPriorityLevelDesc(anyList()))
+                .thenReturn(List.of());
+
+        jobService.removeUserFromNonFinalJobs(2L);
+
+        verify(jobRepository, never()).save(any(Job.class));
     }
 }

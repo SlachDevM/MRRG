@@ -158,7 +158,7 @@ public class UserController {
         if (!userService.isManagerOrAdmin(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
-        return ResponseEntity.ok(userService.getWorkers());
+        return ResponseEntity.ok(userManagementService.getAssignableWorkers());
     }
 
     @PutMapping("/me/fcm-token")

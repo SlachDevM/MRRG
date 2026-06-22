@@ -6,6 +6,7 @@ import com.mrrg.backend.model.JobStatus;
 import com.mrrg.backend.model.NotificationType;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.model.UserRole;
+import com.mrrg.backend.model.UserStatus;
 import com.mrrg.backend.repository.JobRepository;
 import com.mrrg.backend.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -19,26 +20,38 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
 @Slf4j
 public class JobService {
 
+    private static final List<JobStatus> NON_FINAL_STATUSES = Arrays.asList(
+            JobStatus.PENDING,
+            JobStatus.SCHEDULED,
+            JobStatus.IN_PROGRESS,
+            JobStatus.READY_FOR_CONFIRMATION,
+            JobStatus.TO_BE_FIXED
+    );
+
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final UserManagementService userManagementService;
     private final NotificationService notificationService;
 
     public JobService(
             JobRepository jobRepository,
             UserRepository userRepository,
             UserService userService,
+            UserManagementService userManagementService,
             NotificationService notificationService
     ) {
         this.jobRepository = jobRepository;
         this.userRepository = userRepository;
         this.userService = userService;
+        this.userManagementService = userManagementService;
         this.notificationService = notificationService;
     }
 
@@ -88,7 +101,8 @@ public class JobService {
 
     public Job create(Job job, Long createdBy) {
         requireManagerOrAdmin(createdBy);
-        
+        validateAssignableWorkers(job.getAssignedWorkers());
+
         boolean hasDate = job.getJobDate() != null;
         boolean hasWorkers = job.getAssignedWorkers() != null && !job.getAssignedWorkers().isBlank();
         
@@ -154,6 +168,7 @@ public class JobService {
 
     public Job assignWorkers(Long id, String assignedWorkers, Long userId) {
         requireManagerOrAdmin(userId);
+        validateAssignableWorkers(assignedWorkers);
         Job job = getJobOrThrow(id);
         job.setAssignedWorkers(assignedWorkers);  // Format: "1,3,7"
         job.setUpdatedAt(System.currentTimeMillis());
@@ -273,6 +288,26 @@ public class JobService {
         jobRepository.delete(job);
     }
 
+    /**
+     * Removes a user from assignedWorkers on all non-final jobs.
+     * Does not change job status, schedule, or send notifications.
+     */
+    public void removeUserFromNonFinalJobs(Long userId) {
+        List<Job> jobs = jobRepository.findByStatusInOrderByPriorityLevelDesc(NON_FINAL_STATUSES);
+        for (Job job : jobs) {
+            List<Long> workerIds = job.getAssignedWorkerIds();
+            if (!workerIds.contains(userId)) {
+                continue;
+            }
+            List<Long> remaining = workerIds.stream()
+                    .filter(id -> !id.equals(userId))
+                    .collect(Collectors.toList());
+            job.setAssignedWorkerIds(remaining);
+            job.setUpdatedAt(System.currentTimeMillis());
+            jobRepository.save(job);
+        }
+    }
+
     private Job getJobOrThrow(Long id) {
         return jobRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -321,9 +356,49 @@ public class JobService {
             job.setJobStartHour("07:50");
         }
         if (jobUpdate.getAssignedWorkers() != null) {
+            validateAssignableWorkers(jobUpdate.getAssignedWorkers());
             job.setAssignedWorkers(jobUpdate.getAssignedWorkers());
         }
         applyPhotoListUpdate(job, jobUpdate);
+    }
+
+    private void validateAssignableWorkers(String assignedWorkers) {
+        if (assignedWorkers == null || assignedWorkers.isBlank()) {
+            return;
+        }
+
+        for (String workerIdOrName : assignedWorkers.split(",")) {
+            String value = workerIdOrName.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+
+            Long workerId;
+            try {
+                workerId = Long.parseLong(value);
+            } catch (NumberFormatException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid worker ID: " + value);
+            }
+
+            User worker = userRepository.findById(workerId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, "Worker not found: " + workerId));
+
+            UserStatus status = userManagementService.computeStatus(worker);
+            if (status == UserStatus.PENDING_ACTIVATION) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Pending activation users cannot be assigned to jobs.");
+            }
+            if (status == UserStatus.DISABLED) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Disabled users cannot be assigned to jobs.");
+            }
+
+            if (worker.getRole() != UserRole.EMPLOYEE && worker.getRole() != UserRole.MANAGER) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "User cannot be assigned as a worker.");
+            }
+        }
     }
 
     private void applyWorkerPhotoUpdate(Job job, Job jobUpdate) {
@@ -385,7 +460,8 @@ public class JobService {
             try {
                 Long workerId = Long.parseLong(value);
                 Optional<User> worker = userRepository.findById(workerId);
-                if (worker.isPresent()) {
+                if (worker.isPresent()
+                        && userManagementService.computeStatus(worker.get()) == UserStatus.ACTIVE) {
                     notificationService.create(worker.get().getId(), jobId, type, message);
                 }
             } catch (NumberFormatException e) {

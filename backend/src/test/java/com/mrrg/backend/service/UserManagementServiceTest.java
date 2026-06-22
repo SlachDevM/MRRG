@@ -2,6 +2,7 @@ package com.mrrg.backend.service;
 
 import com.mrrg.backend.dto.UpdateUserRequest;
 import com.mrrg.backend.dto.UserManagementResponse;
+import com.mrrg.backend.dto.UserSummary;
 import com.mrrg.backend.model.AccountActivationToken;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.model.UserRole;
@@ -36,6 +37,9 @@ class UserManagementServiceTest {
 
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private JobService jobService;
 
     @InjectMocks
     private UserManagementService userManagementService;
@@ -198,6 +202,7 @@ class UserManagementServiceTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(captor.capture());
         assertThat(captor.getValue().getEnabled()).isFalse();
+        verify(jobService).removeUserFromNonFinalJobs(2L);
     }
 
     @Test
@@ -475,5 +480,32 @@ class UserManagementServiceTest {
         )
         .isInstanceOf(ResponseStatusException.class)
         .hasMessageContaining("already exists with this email");
+    }
+
+    @Test
+    void getAssignableWorkers_shouldReturnOnlyActiveEmployeesAndManagers() {
+        User activeEmployee = new User("active@test.com", "password", "Active", UserRole.EMPLOYEE);
+        activeEmployee.setId(1L);
+        activeEmployee.setEnabled(true);
+
+        User disabledEmployee = new User("disabled@test.com", "password", "Disabled", UserRole.EMPLOYEE);
+        disabledEmployee.setId(2L);
+        disabledEmployee.setEnabled(false);
+
+        User pendingEmployee = new User("pending@test.com", "", "Pending", UserRole.EMPLOYEE);
+        pendingEmployee.setId(3L);
+        pendingEmployee.setEnabled(false);
+
+        when(userRepository.findByRoleInOrderByNameAsc(anyList()))
+                .thenReturn(List.of(activeEmployee, disabledEmployee, pendingEmployee));
+        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.hasValidTokenByUserId(eq(3L), anyLong())).thenReturn(true);
+        lenient().when(tokenRepository.hasValidTokenByUserId(eq(1L), anyLong())).thenReturn(false);
+
+        List<UserSummary> result = userManagementService.getAssignableWorkers();
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).getId()).isEqualTo(1L);
+        assertThat(result.get(0).getName()).isEqualTo("Active");
     }
 }

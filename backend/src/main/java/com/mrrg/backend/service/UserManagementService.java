@@ -2,6 +2,7 @@ package com.mrrg.backend.service;
 
 import com.mrrg.backend.dto.UpdateUserRequest;
 import com.mrrg.backend.dto.UserManagementResponse;
+import com.mrrg.backend.dto.UserSummary;
 import com.mrrg.backend.model.AccountActivationToken;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.model.UserRole;
@@ -9,12 +10,14 @@ import com.mrrg.backend.model.UserStatus;
 import com.mrrg.backend.repository.AccountActivationTokenRepository;
 import com.mrrg.backend.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
@@ -26,6 +29,7 @@ public class UserManagementService {
     private final UserRepository userRepository;
     private final AccountActivationTokenRepository tokenRepository;
     private final EmailService emailService;
+    private final JobService jobService;
 
     private static final SecureRandom secureRandom = new SecureRandom();
     private static final int TOKEN_LENGTH = 32;
@@ -33,10 +37,12 @@ public class UserManagementService {
     public UserManagementService(
             UserRepository userRepository,
             AccountActivationTokenRepository tokenRepository,
-            EmailService emailService) {
+            EmailService emailService,
+            @Lazy JobService jobService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
+        this.jobService = jobService;
     }
 
     /**
@@ -49,6 +55,20 @@ public class UserManagementService {
     public List<UserManagementResponse> listAllUsers() {
         return userRepository.findAll().stream()
                 .map(this::toUserManagementResponse)
+                .toList();
+    }
+
+    /**
+     * Returns employees and managers who are ACTIVE and can be assigned to jobs.
+     */
+    public List<UserSummary> getAssignableWorkers() {
+        return userRepository
+                .findByRoleInOrderByNameAsc(
+                        Arrays.asList(UserRole.EMPLOYEE, UserRole.MANAGER)
+                )
+                .stream()
+                .filter(user -> computeStatus(user) == UserStatus.ACTIVE)
+                .map(UserSummary::new)
                 .toList();
     }
 
@@ -232,6 +252,8 @@ public class UserManagementService {
         user.setEnabled(false);
         user.setUpdatedAt(System.currentTimeMillis());
         userRepository.save(user);
+
+        jobService.removeUserFromNonFinalJobs(userId);
 
         log.info("User {} deactivated by admin {}. New status: {}", userId, requestingAdminId, computeStatus(user));
     }
