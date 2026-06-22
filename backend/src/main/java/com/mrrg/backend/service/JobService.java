@@ -95,8 +95,15 @@ public class JobService {
     }
 
     @Transactional(readOnly = true)
-    public Job getById(Long id) {
-        return getJobOrThrow(id);
+    public Job getById(Long id, Long userId) {
+        Job job = getJobOrThrow(id);
+        if (userService.isManagerOrAdmin(userId)) {
+            return job;
+        }
+        if (job.isWorkerAssigned(userId)) {
+            return job;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN);
     }
 
     public Job create(Job job, Long createdBy) {

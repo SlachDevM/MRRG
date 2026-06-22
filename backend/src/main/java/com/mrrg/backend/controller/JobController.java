@@ -66,7 +66,8 @@ public class JobController {
 
     @GetMapping("/{id}")
     public ResponseEntity<JobResponseDto> getJob(@PathVariable("id") Long id, Authentication authentication) {
-        return ResponseEntity.ok(toJobResponseWithWorkerDetails(jobService.getById(id)));
+        Long userId = getUserId(authentication);
+        return ResponseEntity.ok(toJobResponseWithWorkerDetails(jobService.getById(id, userId)));
     }
 
     @PostMapping

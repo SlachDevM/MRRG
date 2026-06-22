@@ -50,10 +50,10 @@ public class NotificationService {
                 .countByUser_IdAndIsReadFalse(userId);
     }
 
-    public Notification markAsRead(Long notificationId) {
-        Notification notification =
-                notificationRepository.findById(notificationId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+    public Notification markAsRead(Long notificationId, Long userId) {
+        Notification notification = notificationRepository
+                .findByIdAndUser_Id(notificationId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         notification.setIsRead(true);
 

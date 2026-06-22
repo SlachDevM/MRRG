@@ -854,6 +854,70 @@ class JobServiceTest {
         verify(jobRepository, never()).save(any(Job.class));
     }
 
+    @Test
+    void getById_shouldAllowManagerToRetrieveAnyJob() {
+        Job job = sampleJob();
+        job.setId(10L);
+        assignWorkersToJob(job, 99L);
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+
+        Job result = jobService.getById(10L, 1L);
+
+        assertThat(result.getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void getById_shouldAllowAdminToRetrieveAnyJob() {
+        Job job = sampleJob();
+        job.setId(10L);
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(userService.isManagerOrAdmin(5L)).thenReturn(true);
+
+        Job result = jobService.getById(10L, 5L);
+
+        assertThat(result.getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void getById_shouldAllowAssignedEmployeeToRetrieveJob() {
+        Job job = sampleJob();
+        job.setId(10L);
+        assignWorkersToJob(job, 2L);
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(userService.isManagerOrAdmin(2L)).thenReturn(false);
+
+        Job result = jobService.getById(10L, 2L);
+
+        assertThat(result.getId()).isEqualTo(10L);
+    }
+
+    @Test
+    void getById_shouldReturnForbiddenForUnassignedEmployee() {
+        Job job = sampleJob();
+        job.setId(10L);
+        assignWorkersToJob(job, 3L);
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(userService.isManagerOrAdmin(2L)).thenReturn(false);
+
+        assertThatThrownBy(() -> jobService.getById(10L, 2L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("403");
+    }
+
+    @Test
+    void getById_shouldReturnNotFoundWhenJobMissing() {
+        when(jobRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> jobService.getById(99L, 2L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("404");
+    }
+
     private User workerWithId(long id) {
         User worker = new User("worker@test.com", "password", "Worker", UserRole.EMPLOYEE);
         worker.setId(id);

@@ -74,10 +74,10 @@ class NotificationServiceTest {
         notification.setId(5L);
         notification.setIsRead(false);
 
-        when(notificationRepository.findById(5L)).thenReturn(Optional.of(notification));
+        when(notificationRepository.findByIdAndUser_Id(5L, 1L)).thenReturn(Optional.of(notification));
         when(notificationRepository.save(notification)).thenReturn(notification);
 
-        Notification result = notificationService.markAsRead(5L);
+        Notification result = notificationService.markAsRead(5L, 1L);
 
         assertThat(result.getIsRead()).isTrue();
         verify(notificationRepository).save(notification);
@@ -85,11 +85,33 @@ class NotificationServiceTest {
 
     @Test
     void markAsRead_shouldThrowNotFound_whenNotificationDoesNotExist() {
-        when(notificationRepository.findById(99L)).thenReturn(Optional.empty());
+        when(notificationRepository.findByIdAndUser_Id(99L, 1L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> notificationService.markAsRead(99L))
+        assertThatThrownBy(() -> notificationService.markAsRead(99L, 1L))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
+    }
+
+    @Test
+    void markAsRead_shouldThrowNotFound_whenNotificationBelongsToAnotherUser() {
+        when(notificationRepository.findByIdAndUser_Id(5L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> notificationService.markAsRead(5L, 1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("404");
+
+        verify(notificationRepository, never()).save(any());
+    }
+
+    @Test
+    void markAsRead_shouldNotAffectUnreadCountForOtherUsers() {
+        when(notificationRepository.findByIdAndUser_Id(5L, 1L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> notificationService.markAsRead(5L, 1L))
+                .isInstanceOf(ResponseStatusException.class);
+
+        verify(notificationRepository, never()).save(any());
+        verify(notificationRepository, never()).saveAll(any());
     }
 
     @Test
