@@ -1,5 +1,6 @@
 package com.mrrg.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -12,8 +13,9 @@ public class AccountActivationToken {
     @Column(nullable = false, unique = true, columnDefinition = "TEXT")
     private String token;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
     @Column(name = "expires_at", nullable = false)
@@ -52,12 +54,17 @@ public class AccountActivationToken {
         this.token = token;
     }
 
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    @JsonIgnore
     public User getUser() {
         return user;
     }
 
-    public void setUser(User user) {
-        this.user = user;
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
     }
 
     public Long getExpiresAt() {

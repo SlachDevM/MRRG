@@ -180,7 +180,7 @@ public class UserManagementService {
 
         if (status == UserStatus.PENDING_ACTIVATION) {
             // Invalidate old tokens for this user
-            List<AccountActivationToken> oldTokens = tokenRepository.findUnusedByUserId(user.getId());
+            List<AccountActivationToken> oldTokens = tokenRepository.findByUser_IdAndUsedAtIsNull(user.getId());
             oldTokens.forEach(t -> t.setUsedAt(System.currentTimeMillis()));
             tokenRepository.saveAll(oldTokens);
 
@@ -235,7 +235,7 @@ public class UserManagementService {
             // Invalidate all unused activation tokens for this pending user
             // This ensures the old activation link will no longer work
             // and the status transitions from PENDING_ACTIVATION to DISABLED
-            List<AccountActivationToken> pendingTokens = tokenRepository.findUnusedByUserId(userId);
+            List<AccountActivationToken> pendingTokens = tokenRepository.findByUser_IdAndUsedAtIsNull(userId);
             
             pendingTokens.forEach(t -> {
                 t.setUsedAt(System.currentTimeMillis());
@@ -356,7 +356,7 @@ public class UserManagementService {
     }
 
     private void issueActivationToken(User user) {
-        List<AccountActivationToken> oldTokens = tokenRepository.findUnusedByUserId(user.getId());
+        List<AccountActivationToken> oldTokens = tokenRepository.findByUser_IdAndUsedAtIsNull(user.getId());
         oldTokens.forEach(t -> t.setUsedAt(System.currentTimeMillis()));
         tokenRepository.saveAll(oldTokens);
 
@@ -382,7 +382,8 @@ public class UserManagementService {
         }
 
         // Check if user has a valid (unused and not expired) activation token
-        boolean hasPendingToken = tokenRepository.hasValidTokenByUserId(user.getId(), System.currentTimeMillis());
+        boolean hasPendingToken = tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(
+                user.getId(), System.currentTimeMillis());
 
         return hasPendingToken ? UserStatus.PENDING_ACTIVATION : UserStatus.DISABLED;
     }

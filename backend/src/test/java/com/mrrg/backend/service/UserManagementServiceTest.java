@@ -51,7 +51,7 @@ class UserManagementServiceTest {
         user1.setEnabled(true);
 
         when(userRepository.findAll()).thenReturn(List.of(user1));
-        lenient().when(tokenRepository.hasValidTokenByUserId(anyLong(), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(anyLong(), anyLong())).thenReturn(false);
 
         List<UserManagementResponse> result = userManagementService.listAllUsers();
 
@@ -66,7 +66,7 @@ class UserManagementServiceTest {
         user.setEnabled(true);
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(1L), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(1L), anyLong())).thenReturn(false);
 
         UserManagementResponse result = userManagementService.getUserById(1L);
 
@@ -135,7 +135,7 @@ class UserManagementServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(user));
         when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
         when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
 
         UserManagementResponse result = userManagementService.updateUser(2L, request, 1L);
 
@@ -194,7 +194,7 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
         when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         userManagementService.deactivateUser(2L, 1L);
@@ -219,8 +219,8 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(pendingUser));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(true);
-        when(tokenRepository.findUnusedByUserId(2L)).thenReturn(List.of(token));
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(true);
+        when(tokenRepository.findByUser_IdAndUsedAtIsNull(2L)).thenReturn(List.of(token));
         when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         userManagementService.deactivateUser(2L, 1L);
@@ -251,7 +251,7 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(disabledUser));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
         when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         userManagementService.reactivateUser(2L, 1L);
@@ -272,7 +272,7 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(pendingUser));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(true);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(true);
 
         assertThatThrownBy(() -> userManagementService.reactivateUser(2L, 1L))
                 .isInstanceOf(ResponseStatusException.class)
@@ -290,8 +290,8 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(neverActivated));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
-        when(tokenRepository.findUnusedByUserId(2L)).thenReturn(new ArrayList<>());
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.findByUser_IdAndUsedAtIsNull(2L)).thenReturn(new ArrayList<>());
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
         when(userRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
@@ -316,7 +316,7 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser));
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
 
         assertThatThrownBy(() -> userManagementService.reactivateUser(2L, 1L))
                 .isInstanceOf(ResponseStatusException.class)
@@ -337,8 +337,8 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(pendingUser));
-        when(tokenRepository.findUnusedByUserId(2L)).thenReturn(List.of(oldToken));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(true);
+        when(tokenRepository.findByUser_IdAndUsedAtIsNull(2L)).thenReturn(List.of(oldToken));
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(true);
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         userManagementService.resendActivationLink(2L, 1L);
@@ -359,7 +359,7 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(activeUser));
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
 
         assertThatThrownBy(() -> userManagementService.resendActivationLink(2L, 1L))
                 .isInstanceOf(ResponseStatusException.class)
@@ -377,8 +377,8 @@ class UserManagementServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
         when(userRepository.findById(2L)).thenReturn(Optional.of(neverActivated));
-        when(tokenRepository.findUnusedByUserId(2L)).thenReturn(new ArrayList<>());
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.findByUser_IdAndUsedAtIsNull(2L)).thenReturn(new ArrayList<>());
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
         when(tokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
 
         userManagementService.resendActivationLink(2L, 1L);
@@ -393,7 +393,7 @@ class UserManagementServiceTest {
         user.setId(1L);
         user.setEnabled(true);
 
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(1L), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(1L), anyLong())).thenReturn(false);
 
         UserStatus status = userManagementService.computeStatus(user);
 
@@ -406,7 +406,7 @@ class UserManagementServiceTest {
         user.setId(1L);
         user.setEnabled(false);
 
-        when(tokenRepository.hasValidTokenByUserId(eq(1L), anyLong())).thenReturn(true);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(1L), anyLong())).thenReturn(true);
 
         UserStatus status = userManagementService.computeStatus(user);
 
@@ -419,7 +419,7 @@ class UserManagementServiceTest {
         user.setId(1L);
         user.setEnabled(false);
 
-        when(tokenRepository.hasValidTokenByUserId(eq(1L), anyLong())).thenReturn(false);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(1L), anyLong())).thenReturn(false);
 
         UserStatus status = userManagementService.computeStatus(user);
 
@@ -443,7 +443,7 @@ class UserManagementServiceTest {
         when(userRepository.findById(2L)).thenReturn(Optional.of(userToUpdate));
         when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
         when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArguments()[0]);
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
         lenient().doNothing().when(emailService).sendEmailChangeNotification(anyString(), anyString(), anyString());
 
         userManagementService.updateUser(2L, request, 1L);
@@ -498,9 +498,9 @@ class UserManagementServiceTest {
 
         when(userRepository.findByRoleInOrderByNameAsc(anyList()))
                 .thenReturn(List.of(activeEmployee, disabledEmployee, pendingEmployee));
-        when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
-        when(tokenRepository.hasValidTokenByUserId(eq(3L), anyLong())).thenReturn(true);
-        lenient().when(tokenRepository.hasValidTokenByUserId(eq(1L), anyLong())).thenReturn(false);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(2L), anyLong())).thenReturn(false);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(3L), anyLong())).thenReturn(true);
+        lenient().when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(1L), anyLong())).thenReturn(false);
 
         List<UserSummary> result = userManagementService.getAssignableWorkers();
 

@@ -162,7 +162,7 @@ class AuthServiceTest {
 
         when(userRepository.findByEmail("disabled@test.com")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("password", "encoded-password")).thenReturn(true);
-        when(tokenRepository.hasValidTokenByUserId(eq(5L), anyLong())).thenReturn(false);
+        when(tokenRepository.existsByUser_IdAndUsedAtIsNullAndExpiresAtGreaterThan(eq(5L), anyLong())).thenReturn(false);
 
         assertThatThrownBy(() -> authService.login(
                 new LoginRequest("disabled@test.com", "password")
