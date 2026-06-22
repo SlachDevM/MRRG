@@ -114,6 +114,11 @@
   margin: 0;
 }
 
+.job-modal-readonly-workers {
+  color: #333;
+  font-weight: 500;
+}
+
 .job-modal-loading {
   color: #666;
   text-align: center;

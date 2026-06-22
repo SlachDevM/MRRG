@@ -283,6 +283,9 @@ public class JobService {
             job.setStatus(JobStatus.TO_BE_FIXED);
         }
 
+        // Callback fix starts a new active workflow: managers must re-assign workers.
+        // DONE and ARCHIVED jobs keep assignedWorkers until this point for history.
+        job.setAssignedWorkerIds(List.of());
         job.setUpdatedAt(System.currentTimeMillis());
         return jobRepository.save(job);
     }

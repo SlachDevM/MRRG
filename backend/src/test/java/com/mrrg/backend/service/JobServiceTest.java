@@ -213,6 +213,44 @@ class JobServiceTest {
     }
 
     @Test
+    void archive_shouldPreserveAssignedWorkers_forHistoricalTraceability() {
+        Job job = sampleJob();
+        job.setStatus(JobStatus.DONE);
+        job.setAssignedWorkers("2,3");
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+
+        Job result = jobService.archive(10L, 1L);
+
+        assertThat(result.getStatus()).isEqualTo(JobStatus.ARCHIVED);
+        assertThat(result.getAssignedWorkers()).isEqualTo("2,3");
+    }
+
+    @Test
+    void markDone_shouldPreserveAssignedWorkers_forHistoricalTraceability() {
+        Job job = sampleJob();
+        job.setId(10L);
+        job.setStatus(JobStatus.READY_FOR_CONFIRMATION);
+        job.setAssignedWorkers("2,3");
+
+        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
+        worker.setId(2L);
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
+
+        Job result = jobService.markDone(10L, 1L);
+
+        assertThat(result.getStatus()).isEqualTo(JobStatus.DONE);
+        assertThat(result.getAssignedWorkers()).isEqualTo("2,3");
+    }
+
+    @Test
     void archive_shouldThrowBadRequest_whenJobIsAlreadyArchived() {
         Job job = sampleJob();
         job.setStatus(JobStatus.ARCHIVED);
@@ -243,6 +281,80 @@ class JobServiceTest {
         assertThat(result.getStatus()).isEqualTo(JobStatus.TO_BE_FIXED);
         assertThat(result.getJobDate()).isNull();
         assertThat(result.getJobStartHour()).isNull();
+    }
+
+    @Test
+    void callbackFix_shouldClearAssignedWorkers_whenArchivedJobRestoredToToBeFixed() {
+        Job job = sampleJob();
+        job.setId(10L);
+        job.setStatus(JobStatus.ARCHIVED);
+        job.setAssignedWorkers("2,3");
+        job.setDetails("Original details");
+        job.setNotes("Original notes");
+        job.setBeforePhotos(List.of("before.jpg"));
+        job.setAfterPhotos(List.of("after.jpg"));
+
+        CallbackFixRequest request = new CallbackFixRequest();
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.callbackFix(10L, request, 1L);
+
+        assertThat(result.getId()).isEqualTo(10L);
+        assertThat(result.getStatus()).isEqualTo(JobStatus.TO_BE_FIXED);
+        assertThat(result.getAssignedWorkers()).isNull();
+        assertThat(result.getClientName()).isEqualTo("Test Client");
+        assertThat(result.getDetails()).isEqualTo("Original details");
+        assertThat(result.getNotes()).isEqualTo("Original notes");
+        assertThat(result.getBeforePhotos()).containsExactly("before.jpg");
+        assertThat(result.getAfterPhotos()).containsExactly("after.jpg");
+        verify(jobRepository).save(job);
+        verify(jobRepository, never()).delete(any(Job.class));
+    }
+
+    @Test
+    void callbackFix_shouldClearAssignedWorkers_whenArchivedJobScheduledWithDate() {
+        Job job = sampleJob();
+        job.setId(10L);
+        job.setStatus(JobStatus.ARCHIVED);
+        job.setAssignedWorkers("2,3");
+
+        CallbackFixRequest request = new CallbackFixRequest();
+        request.setJobDate(LocalDate.of(2026, 3, 10));
+        request.setJobStartHour("09:30");
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.callbackFix(10L, request, 1L);
+
+        assertThat(result.getId()).isEqualTo(10L);
+        assertThat(result.getStatus()).isEqualTo(JobStatus.SCHEDULED);
+        assertThat(result.getAssignedWorkers()).isNull();
+        verify(jobRepository).save(job);
+    }
+
+    @Test
+    void callbackFix_shouldClearAssignedWorkers_whenDoneJobRestored() {
+        Job job = sampleJob();
+        job.setId(10L);
+        job.setStatus(JobStatus.DONE);
+        job.setAssignedWorkers("2");
+
+        CallbackFixRequest request = new CallbackFixRequest();
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.callbackFix(10L, request, 1L);
+
+        assertThat(result.getId()).isEqualTo(10L);
+        assertThat(result.getStatus()).isEqualTo(JobStatus.TO_BE_FIXED);
+        assertThat(result.getAssignedWorkers()).isNull();
     }
 
     @Test

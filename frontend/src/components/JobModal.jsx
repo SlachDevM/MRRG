@@ -19,7 +19,7 @@ import {
   photosToPayload,
   sanitizeClientName,
 } from '../utils/photoUtils';
-import { getJobPermissions } from '../utils/permissionUtils';
+import { getJobPermissions, formatWorkers } from '../utils/permissionUtils';
 
 function PhotoGallery({ title, photoType, photos, canUpload, uploadHint, onUpload, onDelete, onDownload }) {
   return (
@@ -96,6 +96,7 @@ export default function JobModal({
   const [jobStatus, setJobStatus] = useState(null);
   const [beforePhotos, setBeforePhotos] = useState([]);
   const [afterPhotos, setAfterPhotos] = useState([]);
+  const [historicalWorkers, setHistoricalWorkers] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [completing, setCompleting] = useState(false);
@@ -132,6 +133,7 @@ export default function JobModal({
       setSelectedWorkers([]);
       setBeforePhotos([]);
       setAfterPhotos([]);
+      setHistoricalWorkers(null);
       setError('');
     };
 
@@ -164,6 +166,10 @@ export default function JobModal({
         setJobStatus(fullJob.status || null);
         setBeforePhotos(parsePhotosFromJob(fullJob, 'beforePhotos', 'beforePhoto'));
         setAfterPhotos(parsePhotosFromJob(fullJob, 'afterPhotos', 'afterPhoto'));
+        setHistoricalWorkers({
+          assignedWorkers: fullJob.assignedWorkers || '',
+          assignedWorkerDetails: fullJob.assignedWorkerDetails || [],
+        });
       } catch (err) {
         console.error(err);
         setError('Failed to load job details.');
@@ -650,6 +656,15 @@ export default function JobModal({
                   )}
                 </fieldset>
               </>
+            )}
+
+            {isCallbackOnly && isEdit && (
+              <fieldset className="job-types-fieldset">
+                <legend>Assigned Workers</legend>
+                <p className="job-modal-hint job-modal-readonly-workers">
+                  {formatWorkers(historicalWorkers || job)}
+                </p>
+              </fieldset>
             )}
 
             {isEdit && (canUploadPhotos || beforePhotos.length > 0 || afterPhotos.length > 0) && (
