@@ -98,5 +98,6 @@ Before introducing significant changes, verify that:
 - documentation is updated where necessary;
 - obsolete code has been removed;
 - new code follows the existing project philosophy;
+- automated and manual tests continue to pass;
 
 Maintaining these practices helps ensure that the project remains understandable as it grows.
