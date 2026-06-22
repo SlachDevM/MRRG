@@ -117,4 +117,19 @@ class ApiClient {
 
 const apiClient = new ApiClient(API_CONFIG.BASE_URL);
 
+/**
+ * Returns the API error message when available, otherwise the fallback.
+ * apiClient stores backend messages on err.message; status-only failures use a generic prefix.
+ */
+export function getApiErrorMessage(err, fallback) {
+  const message = err?.message?.trim();
+  if (!message) {
+    return fallback;
+  }
+  if (message.startsWith('API request failed:')) {
+    return fallback;
+  }
+  return message;
+}
+
 export default apiClient;

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import '../styles/JobModal.css';
-import apiClient from '../services/apiClient';
+import apiClient, { getApiErrorMessage } from '../services/apiClient';
 import {
   JOB_TYPES,
   PRIORITY_LEVELS,
@@ -172,7 +172,7 @@ export default function JobModal({
         });
       } catch (err) {
         console.error(err);
-        setError('Failed to load job details.');
+        setError(getApiErrorMessage(err, 'Failed to load job details.'));
       } finally {
         setLoadingJob(false);
       }
@@ -255,15 +255,11 @@ export default function JobModal({
       payload.notes = form.notes.trim() || null;
     }
 
-    try {
-      const savedJob = await apiClient.put(`${API_ENDPOINTS.JOBS}/${job.id}`, payload);
-      setBeforePhotos(parsePhotosFromJob(savedJob, 'beforePhotos', 'beforePhoto'));
-      setAfterPhotos(parsePhotosFromJob(savedJob, 'afterPhotos', 'afterPhoto'));
-      onSuccess(savedJob);
-      return savedJob;
-    } catch (err) {
-      throw new Error('Failed to save photos.');
-    }
+    const savedJob = await apiClient.put(`${API_ENDPOINTS.JOBS}/${job.id}`, payload);
+    setBeforePhotos(parsePhotosFromJob(savedJob, 'beforePhotos', 'beforePhoto'));
+    setAfterPhotos(parsePhotosFromJob(savedJob, 'afterPhotos', 'afterPhoto'));
+    onSuccess(savedJob);
+    return savedJob;
   };
 
   const handleDeletePhoto = async (type, index) => {
@@ -292,7 +288,7 @@ export default function JobModal({
       await persistPhotoLists(nextBefore, nextAfter);
     } catch (err) {
       console.error(err);
-      setError('Failed to delete photo.');
+      setError(getApiErrorMessage(err, 'Failed to delete photo.'));
       if (type === 'before') {
         setBeforePhotos(beforePhotos);
       } else {
@@ -338,7 +334,7 @@ export default function JobModal({
         onClose();
       } catch (err) {
         console.error(err);
-        setError('Failed to save changes.');
+        setError(getApiErrorMessage(err, 'Failed to save changes.'));
       } finally {
         setSubmitting(false);
       }
@@ -388,7 +384,7 @@ export default function JobModal({
       onClose();
     } catch (err) {
       console.error(err);
-      setError(isEdit ? 'Failed to update job.' : 'Failed to create job.');
+      setError(getApiErrorMessage(err, isEdit ? 'Failed to update job.' : 'Failed to create job.'));
     } finally {
       setSubmitting(false);
     }
@@ -402,7 +398,7 @@ export default function JobModal({
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Failed to save changes.');
+      setError(getApiErrorMessage(err, 'Failed to save changes.'));
     } finally {
       setSubmitting(false);
     }
@@ -421,7 +417,7 @@ export default function JobModal({
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Failed to complete job.');
+      setError(getApiErrorMessage(err, 'Failed to complete job.'));
     } finally {
       setCompleting(false);
     }
@@ -440,7 +436,7 @@ export default function JobModal({
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Failed to archive job.');
+      setError(getApiErrorMessage(err, 'Failed to archive job.'));
     } finally {
       setArchiving(false);
     }
@@ -461,7 +457,7 @@ export default function JobModal({
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Failed to callback fix job.');
+      setError(getApiErrorMessage(err, 'Failed to callback fix job.'));
     } finally {
       setCallbackFixing(false);
     }
@@ -480,7 +476,7 @@ export default function JobModal({
       onClose();
     } catch (err) {
       console.error(err);
-      setError('Failed to confirm job.');
+      setError(getApiErrorMessage(err, 'Failed to confirm job.'));
     } finally {
       setConfirming(false);
     }
