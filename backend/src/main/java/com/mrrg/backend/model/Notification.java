@@ -15,8 +15,10 @@ public class Notification {
     @JsonIgnore
     private User user;
 
-    @Column(name = "job_id", nullable = false)
-    private Long jobId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "job_id")
+    @JsonIgnore
+    private Job job;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -36,9 +38,9 @@ public class Notification {
         this.createdAt = System.currentTimeMillis();
     }
 
-    public Notification(User user, Long jobId, NotificationType type, String message) {
+    public Notification(User user, Job job, NotificationType type, String message) {
         this.user = user;
-        this.jobId = jobId;
+        this.job = job;
         this.type = type;
         this.message = message;
         this.isRead = false;
@@ -66,12 +68,17 @@ public class Notification {
         return user != null ? user.getId() : null;
     }
 
-    public Long getJobId() {
-        return jobId;
+    public void setJob(Job job) {
+        this.job = job;
     }
 
-    public void setJobId(Long jobId) {
-        this.jobId = jobId;
+    @JsonIgnore
+    public Job getJob() {
+        return job;
+    }
+
+    public Long getJobId() {
+        return job != null ? job.getId() : null;
     }
 
     public NotificationType getType() {

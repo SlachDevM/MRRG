@@ -1,8 +1,10 @@
 package com.mrrg.backend.service;
 
+import com.mrrg.backend.model.Job;
 import com.mrrg.backend.model.Notification;
 import com.mrrg.backend.model.NotificationType;
 import com.mrrg.backend.model.User;
+import com.mrrg.backend.repository.JobRepository;
 import com.mrrg.backend.repository.NotificationRepository;
 import com.mrrg.backend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
@@ -18,15 +20,18 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final JobRepository jobRepository;
     private final FirebaseNotificationService firebaseNotificationService;
 
     public NotificationService(
             NotificationRepository notificationRepository,
             UserRepository userRepository,
+            JobRepository jobRepository,
             FirebaseNotificationService firebaseNotificationService
     ) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.jobRepository = jobRepository;
         this.firebaseNotificationService = firebaseNotificationService;
     }
 
@@ -71,7 +76,8 @@ public class NotificationService {
             String message
     ) {
         User user = userRepository.getReferenceById(userId);
-        Notification notification = new Notification(user, jobId, type, message);
+        Job job = jobId != null ? jobRepository.getReferenceById(jobId) : null;
+        Notification notification = new Notification(user, job, type, message);
 
         Notification savedNotification = notificationRepository.save(notification);
 
@@ -81,8 +87,8 @@ public class NotificationService {
                 Map<String, String> data = new HashMap<>();
                 data.put("notificationId", String.valueOf(savedNotification.getId()));
                 data.put("notificationType", type.toString());
-                if (jobId != null) {
-                    data.put("jobId", String.valueOf(jobId));
+                if (savedNotification.getJobId() != null) {
+                    data.put("jobId", String.valueOf(savedNotification.getJobId()));
                 }
 
                 String title = generateTitle(type);

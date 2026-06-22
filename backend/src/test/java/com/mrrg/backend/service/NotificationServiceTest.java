@@ -1,9 +1,11 @@
 package com.mrrg.backend.service;
 
+import com.mrrg.backend.model.Job;
 import com.mrrg.backend.model.Notification;
 import com.mrrg.backend.model.NotificationType;
 import com.mrrg.backend.model.User;
 import com.mrrg.backend.model.UserRole;
+import com.mrrg.backend.repository.JobRepository;
 import com.mrrg.backend.repository.NotificationRepository;
 import com.mrrg.backend.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,9 @@ class NotificationServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private JobRepository jobRepository;
+
+    @Mock
     private FirebaseNotificationService firebaseNotificationService;
 
     @InjectMocks
@@ -38,7 +43,7 @@ class NotificationServiceTest {
     @Test
     void getUserNotifications_shouldReturnNotificationsForUser() {
         User user = userWithId(1L);
-        Notification notification = new Notification(user, 100L, NotificationType.JOB_ASSIGNED, "Assigned");
+        Notification notification = new Notification(user, jobWithId(100L), NotificationType.JOB_ASSIGNED, "Assigned");
 
         when(notificationRepository.findByUser_IdOrderByCreatedAtDesc(1L)).thenReturn(List.of(notification));
 
@@ -46,6 +51,7 @@ class NotificationServiceTest {
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getUserId()).isEqualTo(1L);
+        assertThat(result.get(0).getJobId()).isEqualTo(100L);
     }
 
     @Test
@@ -61,7 +67,7 @@ class NotificationServiceTest {
     void markAsRead_shouldSetNotificationAsRead() {
         Notification notification = new Notification(
                 userWithId(1L),
-                100L,
+                jobWithId(100L),
                 NotificationType.JOB_ASSIGNED,
                 "Job assigned"
         );
@@ -87,10 +93,12 @@ class NotificationServiceTest {
     }
 
     @Test
-    void create_shouldCreateUnreadNotificationWithUserReference() {
+    void create_shouldCreateUnreadNotificationWithUserAndJobReferences() {
         User user = userWithId(1L);
+        Job job = jobWithId(100L);
 
         when(userRepository.getReferenceById(1L)).thenReturn(user);
+        when(jobRepository.getReferenceById(100L)).thenReturn(job);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(notificationRepository.save(any(Notification.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -108,6 +116,7 @@ class NotificationServiceTest {
         Notification saved = captor.getValue();
 
         assertThat(saved.getUser()).isSameAs(user);
+        assertThat(saved.getJob()).isSameAs(job);
         assertThat(saved.getUserId()).isEqualTo(1L);
         assertThat(saved.getJobId()).isEqualTo(100L);
         assertThat(saved.getType()).isEqualTo(NotificationType.JOB_ASSIGNED);
@@ -115,14 +124,40 @@ class NotificationServiceTest {
         assertThat(saved.getIsRead()).isFalse();
 
         assertThat(result.getUserId()).isEqualTo(1L);
+        assertThat(result.getJobId()).isEqualTo(100L);
         assertThat(result.getIsRead()).isFalse();
+    }
+
+    @Test
+    void create_shouldAllowNotificationWithoutJob() {
+        User user = userWithId(1L);
+
+        when(userRepository.getReferenceById(1L)).thenReturn(user);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(notificationRepository.save(any(Notification.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        Notification result = notificationService.create(
+                1L,
+                null,
+                NotificationType.JOB_ASSIGNED,
+                "General message"
+        );
+
+        ArgumentCaptor<Notification> captor = ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(captor.capture());
+        verify(jobRepository, never()).getReferenceById(anyLong());
+
+        assertThat(captor.getValue().getJob()).isNull();
+        assertThat(captor.getValue().getJobId()).isNull();
+        assertThat(result.getJobId()).isNull();
     }
 
     @Test
     void markAllAsRead_shouldMarkEveryUnreadNotificationAsRead() {
         User user = userWithId(1L);
-        Notification first = new Notification(user, 100L, NotificationType.JOB_ASSIGNED, "First");
-        Notification second = new Notification(user, 101L, NotificationType.JOB_RESCHEDULED, "Second");
+        Notification first = new Notification(user, jobWithId(100L), NotificationType.JOB_ASSIGNED, "First");
+        Notification second = new Notification(user, jobWithId(101L), NotificationType.JOB_RESCHEDULED, "Second");
 
         when(notificationRepository.findByUser_IdAndIsReadFalseOrderByCreatedAtDesc(1L))
                 .thenReturn(List.of(first, second));
@@ -139,5 +174,11 @@ class NotificationServiceTest {
         User user = new User("user@test.com", "password", "User", UserRole.EMPLOYEE);
         user.setId(id);
         return user;
+    }
+
+    private Job jobWithId(long id) {
+        Job job = new Job();
+        job.setId(id);
+        return job;
     }
 }
