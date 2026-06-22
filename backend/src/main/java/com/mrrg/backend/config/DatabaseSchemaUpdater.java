@@ -7,6 +7,8 @@ import org.springframework.context.ApplicationListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class DatabaseSchemaUpdater implements ApplicationListener<ApplicationReadyEvent> {
     private static final Logger log = LoggerFactory.getLogger(DatabaseSchemaUpdater.class);
@@ -41,6 +43,67 @@ public class DatabaseSchemaUpdater implements ApplicationListener<ApplicationRea
 
         migrateLegacyPhotoColumn("before_photo", "before_photos");
         migrateLegacyPhotoColumn("after_photo", "after_photos");
+        migrateLegacyAssignedWorkers();
+    }
+
+    private void migrateLegacyAssignedWorkers() {
+        jdbcTemplate.execute(
+                "CREATE TABLE IF NOT EXISTS job_assignments ("
+                        + "id BIGSERIAL PRIMARY KEY, "
+                        + "job_id BIGINT NOT NULL REFERENCES jobs(id) ON DELETE CASCADE, "
+                        + "user_id BIGINT NOT NULL REFERENCES users(id), "
+                        + "CONSTRAINT uk_job_assignments_job_user UNIQUE (job_id, user_id)"
+                        + ")"
+        );
+
+        List<Long> jobIds = jdbcTemplate.queryForList(
+                "SELECT id FROM jobs "
+                        + "WHERE assigned_workers IS NOT NULL "
+                        + "AND TRIM(assigned_workers) <> ''",
+                Long.class
+        );
+
+        for (Long jobId : jobIds) {
+            Integer existing = jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM job_assignments WHERE job_id = ?",
+                    Integer.class,
+                    jobId
+            );
+            if (existing != null && existing > 0) {
+                continue;
+            }
+
+            String assignedWorkers = jdbcTemplate.queryForObject(
+                    "SELECT assigned_workers FROM jobs WHERE id = ?",
+                    String.class,
+                    jobId
+            );
+            if (assignedWorkers == null || assignedWorkers.isBlank()) {
+                continue;
+            }
+
+            for (String part : assignedWorkers.split(",")) {
+                String value = part.trim();
+                if (value.isEmpty()) {
+                    continue;
+                }
+                try {
+                    Long userId = Long.parseLong(value);
+                    jdbcTemplate.update(
+                            "INSERT INTO job_assignments (job_id, user_id) VALUES (?, ?) "
+                                    + "ON CONFLICT (job_id, user_id) DO NOTHING",
+                            jobId,
+                            userId
+                    );
+                } catch (NumberFormatException e) {
+                    log.warn(
+                            "Skipping legacy assigned worker value for job {} (not a user ID): {}",
+                            jobId,
+                            value
+                    );
+                }
+            }
+        }
     }
 
     private void migrateLegacyPhotoColumn(String legacyColumn, String newColumn) {

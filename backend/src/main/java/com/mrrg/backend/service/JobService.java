@@ -18,9 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -101,32 +101,33 @@ public class JobService {
 
     public Job create(Job job, Long createdBy) {
         requireManagerOrAdmin(createdBy);
-        validateAssignableWorkers(job.getAssignedWorkers());
+        String workersInput = job.getAssignedWorkersInput();
+        validateAssignableWorkers(workersInput);
+        applyAssignedWorkers(job, workersInput);
 
         boolean hasDate = job.getJobDate() != null;
-        boolean hasWorkers = job.getAssignedWorkers() != null && !job.getAssignedWorkers().isBlank();
-        
+        boolean hasWorkers = !job.getAssignedWorkerIds().isEmpty();
+
         if (hasDate) {
             job.setStatus(JobStatus.SCHEDULED);
         } else {
             job.setStatus(JobStatus.PENDING);
         }
-        
+
         job.setCreatedBy(createdBy);
         Job savedJob = jobRepository.save(job);
-        
+
         if (hasDate && hasWorkers) {
-            notifyAssignedWorkers(savedJob, savedJob.getId(), job.getAssignedWorkers());
+            notifyAssignedWorkers(savedJob, savedJob.getId());
         }
-        
+
         return savedJob;
     }
 
     public Job update(Long id, Job jobUpdate, Long userId) {
         Job job = getJobOrThrow(id);
         boolean isManager = userService.isManagerOrAdmin(userId);
-        // For backward compatibility: check both ID and name format
-        boolean isWorker = job.isWorkerAssigned(userId) || isAssignedWorkerByName(job, userId);
+        boolean isWorker = job.isWorkerAssigned(userId);
 
         if (!isManager && !isWorker) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
@@ -139,11 +140,11 @@ public class JobService {
                 boolean wasPending = (job.getJobDate() == null);
                 applyManagerJobUpdate(job, jobUpdate);
                 boolean isNowScheduled = (job.getJobDate() != null);
-                
-                if (jobUpdate.getAssignedWorkers() != null && !jobUpdate.getAssignedWorkers().isEmpty()) {
-                    notifyAssignedWorkers(job, id, jobUpdate.getAssignedWorkers());
-                } else if (wasPending && isNowScheduled && job.getAssignedWorkers() != null && !job.getAssignedWorkers().isEmpty()) {
-                    notifyAssignedWorkers(job, id, job.getAssignedWorkers());
+
+                if (jobUpdate.getAssignedWorkersInput() != null && !jobUpdate.getAssignedWorkersInput().isBlank()) {
+                    notifyAssignedWorkers(job, id);
+                } else if (wasPending && isNowScheduled && !job.getAssignedWorkerIds().isEmpty()) {
+                    notifyAssignedWorkers(job, id);
                 }
             }
         } else {
@@ -168,10 +169,10 @@ public class JobService {
         requireManagerOrAdmin(userId);
         validateAssignableWorkers(assignedWorkers);
         Job job = getJobOrThrow(id);
-        job.setAssignedWorkers(assignedWorkers);  // Format: "1,3,7"
+        applyAssignedWorkers(job, assignedWorkers);
         job.setUpdatedAt(System.currentTimeMillis());
         Job savedJob = jobRepository.save(job);
-        notifyAssignedWorkers(job, id, assignedWorkers);
+        notifyAssignedWorkers(job, id);
         return savedJob;
     }
 
@@ -182,9 +183,8 @@ public class JobService {
         }
 
         boolean isManager = userService.isManagerOrAdmin(userId);
-        // For backward compatibility: check both ID format and name format
-        boolean isWorker = job.isWorkerAssigned(userId) || isAssignedWorkerByName(job, userId);
-        
+        boolean isWorker = job.isWorkerAssigned(userId);
+
         if (!isManager && !isWorker) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
@@ -208,24 +208,6 @@ public class JobService {
         );
 
         return savedJob;
-    }
-
-    /**
-     * Backward compatibility: checks if user (by name) is assigned to job.
-     * Used during migration from name-based to ID-based storage.
-     * @deprecated Use job.isWorkerAssigned(userId) for new code
-     */
-    private boolean isAssignedWorkerByName(Job job, Long userId) {
-        User user = userService.getById(userId);
-        if (job.getAssignedWorkers() == null || user.getName() == null || user.getName().isBlank()) {
-            return false;
-        }
-        for (String assigned : job.getAssignedWorkers().split(",")) {
-            if (assigned.trim().equalsIgnoreCase(user.getName().trim())) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public Job markDone(Long id, Long userId) {
@@ -283,9 +265,7 @@ public class JobService {
             job.setStatus(JobStatus.TO_BE_FIXED);
         }
 
-        // Callback fix starts a new active workflow: managers must re-assign workers.
-        // DONE and ARCHIVED jobs keep assignedWorkers until this point for history.
-        job.setAssignedWorkerIds(List.of());
+        job.clearAssignedWorkers();
         job.setUpdatedAt(System.currentTimeMillis());
         return jobRepository.save(job);
     }
@@ -297,7 +277,7 @@ public class JobService {
     }
 
     /**
-     * Removes a user from assignedWorkers on all non-final jobs.
+     * Removes a user from assignments on all non-final jobs.
      * Does not change job status, schedule, or send notifications.
      */
     public void removeUserFromNonFinalJobs(Long userId) {
@@ -307,10 +287,14 @@ public class JobService {
             if (!workerIds.contains(userId)) {
                 continue;
             }
-            List<Long> remaining = workerIds.stream()
+            List<User> remaining = workerIds.stream()
                     .filter(id -> !id.equals(userId))
-                    .collect(Collectors.toList());
-            job.setAssignedWorkerIds(remaining);
+                    .map(workerId -> userRepository.findById(workerId)
+                            .orElseThrow(() -> new ResponseStatusException(
+                                    HttpStatus.INTERNAL_SERVER_ERROR,
+                                    "Assigned worker not found: " + workerId)))
+                    .toList();
+            job.replaceAssignments(remaining);
             job.setUpdatedAt(System.currentTimeMillis());
             jobRepository.save(job);
         }
@@ -363,9 +347,9 @@ public class JobService {
         } else if (job.getJobDate() != null && job.getJobStartHour() == null) {
             job.setJobStartHour("07:50");
         }
-        if (jobUpdate.getAssignedWorkers() != null) {
-            validateAssignableWorkers(jobUpdate.getAssignedWorkers());
-            job.setAssignedWorkers(jobUpdate.getAssignedWorkers());
+        if (jobUpdate.getAssignedWorkersInput() != null) {
+            validateAssignableWorkers(jobUpdate.getAssignedWorkersInput());
+            applyAssignedWorkers(job, jobUpdate.getAssignedWorkersInput());
         }
         applyPhotoListUpdate(job, jobUpdate);
     }
@@ -374,6 +358,8 @@ public class JobService {
         if (assignedWorkers == null || assignedWorkers.isBlank()) {
             return;
         }
+
+        Set<Long> seenWorkerIds = new HashSet<>();
 
         for (String workerIdOrName : assignedWorkers.split(",")) {
             String value = workerIdOrName.trim();
@@ -386,6 +372,12 @@ public class JobService {
                 workerId = Long.parseLong(value);
             } catch (NumberFormatException e) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid worker ID: " + value);
+            }
+
+            if (!seenWorkerIds.add(workerId)) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Duplicate worker assignment: " + workerId);
             }
 
             User worker = userRepository.findById(workerId)
@@ -407,6 +399,30 @@ public class JobService {
                         HttpStatus.BAD_REQUEST, "User cannot be assigned as a worker.");
             }
         }
+    }
+
+    private void applyAssignedWorkers(Job job, String assignedWorkers) {
+        if (assignedWorkers == null) {
+            return;
+        }
+        if (assignedWorkers.isBlank()) {
+            job.clearAssignedWorkers();
+            return;
+        }
+
+        List<User> workers = new ArrayList<>();
+        for (String workerIdOrName : assignedWorkers.split(",")) {
+            String value = workerIdOrName.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            Long workerId = Long.parseLong(value);
+            User worker = userRepository.findById(workerId)
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.BAD_REQUEST, "Worker not found: " + workerId));
+            workers.add(worker);
+        }
+        job.replaceAssignments(workers);
     }
 
     private void applyWorkerPhotoUpdate(Job job, Job jobUpdate) {
@@ -440,50 +456,20 @@ public class JobService {
         applyPhotoListUpdate(job, jobUpdate);
     }
 
-    private void notifyAssignedWorkers(Job job, Long jobId, String assignedWorkers) {
+    private void notifyAssignedWorkers(Job job, Long jobId) {
         notifyWorkers(
                 job,
                 jobId,
                 NotificationType.JOB_ASSIGNED,
-                "You have been assigned to job: " + job.getClientName(),
-                assignedWorkers
+                "You have been assigned to job: " + job.getClientName()
         );
     }
 
     private void notifyWorkers(Job job, Long jobId, NotificationType type, String message) {
-        notifyWorkers(job, jobId, type, message, job.getAssignedWorkers());
-    }
-
-    private void notifyWorkers(
-            Job job,
-            Long jobId,
-            NotificationType type,
-            String message,
-            String assignedWorkers
-    ) {
-        if (assignedWorkers == null || assignedWorkers.isBlank()) {
-            return;
-        }
-
-        // Parse comma-separated values (could be user IDs or names for backward compatibility)
-        for (String workerIdOrName : assignedWorkers.split(",")) {
-            String value = workerIdOrName.trim();
-            if (value.isEmpty()) {
-                continue;
-            }
-            
-            // Try to parse as ID first
-            try {
-                Long workerId = Long.parseLong(value);
-                Optional<User> worker = userRepository.findById(workerId);
-                if (worker.isPresent()
-                        && userManagementService.computeStatus(worker.get()) == UserStatus.ACTIVE) {
-                    notificationService.create(worker.get().getId(), jobId, type, message);
-                }
-            } catch (NumberFormatException e) {
-                // Backward compatibility: try to find by name (during migration)
-                log.debug("Worker value is not an ID, skipping: {}", value);
-                // Do not throw - just skip invalid entries during migration
+        for (Long workerId : job.getAssignedWorkerIds()) {
+            User worker = userRepository.findById(workerId).orElse(null);
+            if (worker != null && userManagementService.computeStatus(worker) == UserStatus.ACTIVE) {
+                notificationService.create(worker.getId(), jobId, type, message);
             }
         }
     }

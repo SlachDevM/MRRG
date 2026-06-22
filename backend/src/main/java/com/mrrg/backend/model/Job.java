@@ -1,12 +1,17 @@
 package com.mrrg.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+
 @Entity
 @Table(name = "jobs")
 public class Job {
@@ -37,8 +42,23 @@ public class Job {
     @Column(name = "job_start_hour")
     private String jobStartHour;
 
-    @Column(columnDefinition = "TEXT")
-    private String assignedWorkers;
+    /**
+     * Legacy column kept for startup migration only. Not the source of truth.
+     * See DatabaseSchemaUpdater.migrateLegacyAssignedWorkers().
+     */
+    @Column(name = "assigned_workers", columnDefinition = "TEXT", insertable = false, updatable = false)
+    @JsonIgnore
+    private String legacyAssignedWorkers;
+
+    @OneToMany(mappedBy = "job", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private Set<JobAssignment> assignments = new HashSet<>();
+
+    /**
+     * Incoming API field for create/update requests. Consumed by JobService before persistence.
+     */
+    @Transient
+    private String assignedWorkersInput;
 
     @Column(columnDefinition = "TEXT")
     private String details;
@@ -73,64 +93,59 @@ public class Job {
         this.updatedAt = System.currentTimeMillis();
     }
 
-    /**
-     * Parses assigned worker IDs from the comma-separated string.
-     * Format: "1,3,7"
-     * 
-     * Backward compatibility: If assignedWorkers contains non-numeric values (names from old format),
-     * those entries are silently skipped during the migration period.
-     * 
-     * @return List of user IDs, empty list if none assigned or all values are non-numeric
-     */
     public List<Long> getAssignedWorkerIds() {
-        if (assignedWorkers == null || assignedWorkers.isBlank()) {
-            return new ArrayList<>();
-        }
-        return Arrays.stream(assignedWorkers.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .mapToLong(s -> {
-                    try {
-                        return Long.parseLong(s);
-                    } catch (NumberFormatException e) {
-                        // Backward compatibility: skip non-numeric values (old worker names)
-                        // These should be migrated to IDs separately
-                        return -1L;
-                    }
-                })
-                .filter(id -> id >= 0)
-                .boxed()
+        return assignments.stream()
+                .map(JobAssignment::getUserId)
+                .filter(id -> id != null)
+                .sorted()
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Sets assigned workers from a list of user IDs.
-     * Stores them in comma-separated format: "1,3,7"
-     * 
-     * @param workerIds list of user IDs
-     */
-    public void setAssignedWorkerIds(List<Long> workerIds) {
-        if (workerIds == null || workerIds.isEmpty()) {
-            this.assignedWorkers = null;
-        } else {
-            this.assignedWorkers = workerIds.stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining(","));
+    public void replaceAssignments(Collection<User> workers) {
+        assignments.clear();
+        if (workers == null || workers.isEmpty()) {
+            return;
+        }
+        Set<Long> seenUserIds = new HashSet<>();
+        for (User worker : workers) {
+            if (worker == null || worker.getId() == null || !seenUserIds.add(worker.getId())) {
+                continue;
+            }
+            assignments.add(new JobAssignment(this, worker));
         }
     }
 
-    /**
-     * Checks if a user ID is in the assigned workers list.
-     * Used for permission checks.
-     * 
-     * @param userId the user ID to check
-     * @return true if the user is assigned to this job
-     */
+    public void clearAssignedWorkers() {
+        assignments.clear();
+    }
+
     public boolean isWorkerAssigned(Long userId) {
         if (userId == null) {
             return false;
         }
         return getAssignedWorkerIds().contains(userId);
+    }
+
+    /**
+     * Comma-separated worker IDs for API compatibility, e.g. "1,3,7".
+     */
+    public String getAssignedWorkers() {
+        List<Long> ids = getAssignedWorkerIds();
+        if (ids.isEmpty()) {
+            return null;
+        }
+        return ids.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+    }
+
+    @JsonProperty("assignedWorkers")
+    public void setAssignedWorkers(String assignedWorkers) {
+        this.assignedWorkersInput = assignedWorkers;
+    }
+
+    public String getAssignedWorkersInput() {
+        return assignedWorkersInput;
     }
 
     public Long getId() {
@@ -195,14 +210,6 @@ public class Job {
 
     public void setJobStartHour(String jobStartHour) {
         this.jobStartHour = jobStartHour;
-    }
-
-    public String getAssignedWorkers() {
-        return assignedWorkers;
-    }
-
-    public void setAssignedWorkers(String assignedWorkers) {
-        this.assignedWorkers = assignedWorkers;
     }
 
     public String getDetails() {

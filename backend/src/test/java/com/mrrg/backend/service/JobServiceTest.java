@@ -16,6 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,7 +65,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setJobDate(LocalDate.of(2026, 3, 10));
         job.setJobStartHour("08:00");
-        job.setAssignedWorkers("2");
+        assignWorkersToJob(job, 2L);
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -107,7 +108,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.SCHEDULED);
-        job.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(job, 2L);
         job.setCreatedBy(1L);
         job.setAfterPhotos(List.of("after-photo.jpg"));
 
@@ -135,13 +136,9 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.SCHEDULED);
-        job.setAssignedWorkers("3");  // Worker ID 3
-
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
+        assignWorkersToJob(job, 3L);  // Worker ID 3
 
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
 
         assertThatThrownBy(() -> jobService.markReadyForConfirmation(10L, 2L))
@@ -156,7 +153,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.READY_FOR_CONFIRMATION);
-        job.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(job, 2L);  // Worker ID 2
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -216,7 +213,7 @@ class JobServiceTest {
     void archive_shouldPreserveAssignedWorkers_forHistoricalTraceability() {
         Job job = sampleJob();
         job.setStatus(JobStatus.DONE);
-        job.setAssignedWorkers("2,3");
+        assignWorkersToJob(job, 2L, 3L);
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
@@ -233,7 +230,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.READY_FOR_CONFIRMATION);
-        job.setAssignedWorkers("2,3");
+        assignWorkersToJob(job, 2L, 3L);
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -242,7 +239,8 @@ class JobServiceTest {
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(jobRepository.save(job)).thenReturn(job);
         when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
-        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
+        when(userRepository.findById(3L)).thenReturn(Optional.of(workerWithId(3L)));
+        when(userManagementService.computeStatus(any(User.class))).thenReturn(UserStatus.ACTIVE);
 
         Job result = jobService.markDone(10L, 1L);
 
@@ -288,7 +286,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.ARCHIVED);
-        job.setAssignedWorkers("2,3");
+        assignWorkersToJob(job, 2L, 3L);
         job.setDetails("Original details");
         job.setNotes("Original notes");
         job.setBeforePhotos(List.of("before.jpg"));
@@ -319,7 +317,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.ARCHIVED);
-        job.setAssignedWorkers("2,3");
+        assignWorkersToJob(job, 2L, 3L);
 
         CallbackFixRequest request = new CallbackFixRequest();
         request.setJobDate(LocalDate.of(2026, 3, 10));
@@ -342,7 +340,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.DONE);
-        job.setAssignedWorkers("2");
+        assignWorkersToJob(job, 2L);
 
         CallbackFixRequest request = new CallbackFixRequest();
 
@@ -399,7 +397,7 @@ class JobServiceTest {
     void update_shouldAllowAssignedWorkerToUploadPhotos() {
         Job existingJob = sampleJob();
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("before-photo.jpg"));
@@ -417,7 +415,7 @@ class JobServiceTest {
     void update_shouldRejectWorkerUpdateWithoutPhotos() {
         Job existingJob = sampleJob();
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
 
@@ -477,7 +475,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64EncodedPhoto1", "base64EncodedPhoto2"));
@@ -498,7 +496,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
         update.setAfterPhotos(List.of("base64EncodedPhoto1"));
@@ -519,7 +517,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
         update.setNotes("Job in progress, gutters cleaned");
@@ -540,7 +538,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.IN_PROGRESS);
-        existingJob.setAssignedWorkers("2");
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setNotes("Updated note");
@@ -560,7 +558,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64Photo"));
@@ -583,7 +581,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.PENDING);
-        existingJob.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64Photo"));
@@ -604,7 +602,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.IN_PROGRESS);
-        job.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(job, 2L);  // Worker ID 2
         job.setCreatedBy(1L);
         job.setAfterPhotos(List.of("after-photo.jpg"));
 
@@ -629,7 +627,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.IN_PROGRESS);
-        job.setAssignedWorkers("2");
+        assignWorkersToJob(job, 2L);
         job.setCreatedBy(1L);
 
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
@@ -648,7 +646,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.PENDING);
-        job.setAssignedWorkers("2");  // Worker ID 2
+        assignWorkersToJob(job, 2L);  // Worker ID 2
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -663,48 +661,40 @@ class JobServiceTest {
     }
 
     @Test
-    void jobIsWorkerAssigned_shouldReturnTrue_whenUserIdInAssignedList() {
-        Job job = new Job();
-        job.setAssignedWorkers("1,3,7");
+    void assignWorkers_shouldAssignMultipleWorkers() {
+        Job job = sampleJob();
+        job.setId(10L);
 
-        assertThat(job.isWorkerAssigned(3L)).isTrue();
-        assertThat(job.isWorkerAssigned(1L)).isTrue();
-        assertThat(job.isWorkerAssigned(7L)).isTrue();
+        User worker2 = workerWithId(2L);
+        User worker3 = workerWithId(3L);
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker2));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(worker3));
+        when(userManagementService.computeStatus(any(User.class))).thenReturn(UserStatus.ACTIVE);
+
+        Job result = jobService.assignWorkers(10L, "2,3", 1L);
+
+        assertThat(result.getAssignedWorkers()).isEqualTo("2,3");
+        verify(notificationService).create(2L, 10L, NotificationType.JOB_ASSIGNED, "You have been assigned to job: Test Client");
+        verify(notificationService).create(3L, 10L, NotificationType.JOB_ASSIGNED, "You have been assigned to job: Test Client");
     }
 
     @Test
-    void jobIsWorkerAssigned_shouldReturnFalse_whenUserIdNotInAssignedList() {
-        Job job = new Job();
-        job.setAssignedWorkers("1,3,7");
+    void assignWorkers_shouldRejectDuplicateWorkerIds() {
+        User worker = workerWithId(2L);
 
-        assertThat(job.isWorkerAssigned(2L)).isFalse();
-        assertThat(job.isWorkerAssigned(99L)).isFalse();
-    }
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
 
-    @Test
-    void getAssignedWorkerIds_shouldParseCommaDelimitedIds() {
-        Job job = new Job();
-        job.setAssignedWorkers("1,3,7");
+        assertThatThrownBy(() -> jobService.assignWorkers(10L, "2,2", 1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Duplicate worker assignment");
 
-        List<Long> ids = job.getAssignedWorkerIds();
-
-        assertThat(ids).containsExactly(1L, 3L, 7L);
-    }
-
-    @Test
-    void setAssignedWorkerIds_shouldCreateCommaDelimitedString() {
-        Job job = new Job();
-        job.setAssignedWorkerIds(List.of(1L, 3L, 7L));
-
-        assertThat(job.getAssignedWorkers()).isEqualTo("1,3,7");
-    }
-
-    @Test
-    void setAssignedWorkerIds_shouldSetToNull_whenListEmpty() {
-        Job job = new Job();
-        job.setAssignedWorkerIds(List.of());
-
-        assertThat(job.getAssignedWorkers()).isNull();
+        verify(jobRepository, never()).save(any(Job.class));
     }
 
     @Test
@@ -713,16 +703,12 @@ class JobServiceTest {
         job.setId(10L);
         job.setClientName("Test Job");
         job.setStatus(JobStatus.SCHEDULED);
-        job.setAssignedWorkers("1,3,7");
+        assignWorkersToJob(job, 1L, 3L, 7L);
 
-        // User ID 3 changes their name from "John Smith" to "John Smith Jr."
-        // The job should still work because it's based on ID, not name
-        User worker = new User("worker@test.com", "password", "John Smith Jr.", UserRole.EMPLOYEE);
-        worker.setId(3L);
+        User worker = workerWithId(3L);
+        worker.setName("John Smith Jr.");
 
-        // Assignment check should still work
         assertThat(job.isWorkerAssigned(3L)).isTrue();
-        // Even though name changed
         assertThat(worker.getName()).isEqualTo("John Smith Jr.");
     }
 
@@ -778,7 +764,7 @@ class JobServiceTest {
         job.setId(10L);
         job.setStatus(JobStatus.SCHEDULED);
         job.setJobDate(LocalDate.of(2026, 3, 10));
-        job.setAssignedWorkers("2");
+        assignWorkersToJob(job, 2L);
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
@@ -786,7 +772,7 @@ class JobServiceTest {
 
         Job result = jobService.assignWorkers(10L, "", 1L);
 
-        assertThat(result.getAssignedWorkers()).isEmpty();
+        assertThat(result.getAssignedWorkers()).isNull();
         verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
     }
 
@@ -796,10 +782,11 @@ class JobServiceTest {
         scheduledJob.setId(10L);
         scheduledJob.setStatus(JobStatus.SCHEDULED);
         scheduledJob.setJobDate(LocalDate.of(2026, 3, 10));
-        scheduledJob.setAssignedWorkers("2,3");
+        assignWorkersToJob(scheduledJob, 2L, 3L);
 
         when(jobRepository.findByStatusInOrderByPriorityLevelDesc(anyList()))
                 .thenReturn(List.of(scheduledJob));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(workerWithId(3L)));
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         jobService.removeUserFromNonFinalJobs(2L);
@@ -817,7 +804,7 @@ class JobServiceTest {
         scheduledJob.setId(10L);
         scheduledJob.setStatus(JobStatus.SCHEDULED);
         scheduledJob.setJobDate(LocalDate.of(2026, 3, 10));
-        scheduledJob.setAssignedWorkers("2");
+        assignWorkersToJob(scheduledJob, 2L);
 
         when(jobRepository.findByStatusInOrderByPriorityLevelDesc(anyList()))
                 .thenReturn(List.of(scheduledJob));
@@ -855,5 +842,28 @@ class JobServiceTest {
         jobService.removeUserFromNonFinalJobs(2L);
 
         verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void removeUserFromNonFinalJobs_shouldNotModifyArchivedJobs() {
+        when(jobRepository.findByStatusInOrderByPriorityLevelDesc(anyList()))
+                .thenReturn(List.of());
+
+        jobService.removeUserFromNonFinalJobs(2L);
+
+        verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    private User workerWithId(long id) {
+        User worker = new User("worker@test.com", "password", "Worker", UserRole.EMPLOYEE);
+        worker.setId(id);
+        return worker;
+    }
+
+    private void assignWorkersToJob(Job job, long... workerIds) {
+        List<User> workers = Arrays.stream(workerIds)
+                .mapToObj(this::workerWithId)
+                .toList();
+        job.replaceAssignments(workers);
     }
 }

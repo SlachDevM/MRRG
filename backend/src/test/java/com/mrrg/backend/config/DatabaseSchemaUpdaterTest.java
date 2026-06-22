@@ -13,6 +13,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import java.util.List;
+
 @ExtendWith(MockitoExtension.class)
 class DatabaseSchemaUpdaterTest {
 
@@ -121,6 +123,43 @@ class DatabaseSchemaUpdaterTest {
 
         assertThat(beforePhotos).as("Should add before_photos column").isNotNull();
         assertThat(afterPhotos).as("Should add after_photos column").isNotNull();
+    }
+
+    @Test
+    void onApplicationEvent_migratesLegacyAssignedWorkers() {
+        ApplicationReadyEvent event = mock(ApplicationReadyEvent.class);
+
+        when(jdbcTemplate.queryForList(
+                "SELECT id FROM jobs "
+                        + "WHERE assigned_workers IS NOT NULL "
+                        + "AND TRIM(assigned_workers) <> ''",
+                Long.class
+        )).thenReturn(List.of(10L));
+        when(jdbcTemplate.queryForObject(
+                eq("SELECT COUNT(*) FROM job_assignments WHERE job_id = ?"),
+                eq(Integer.class),
+                eq(10L)
+        )).thenReturn(0);
+        when(jdbcTemplate.queryForObject(
+                eq("SELECT assigned_workers FROM jobs WHERE id = ?"),
+                eq(String.class),
+                eq(10L)
+        )).thenReturn("2,3");
+
+        schemaUpdater.onApplicationEvent(event);
+
+        verify(jdbcTemplate).update(
+                eq("INSERT INTO job_assignments (job_id, user_id) VALUES (?, ?) "
+                        + "ON CONFLICT (job_id, user_id) DO NOTHING"),
+                eq(10L),
+                eq(2L)
+        );
+        verify(jdbcTemplate).update(
+                eq("INSERT INTO job_assignments (job_id, user_id) VALUES (?, ?) "
+                        + "ON CONFLICT (job_id, user_id) DO NOTHING"),
+                eq(10L),
+                eq(3L)
+        );
     }
 
     @Test
