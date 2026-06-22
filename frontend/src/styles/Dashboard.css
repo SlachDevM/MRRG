@@ -47,7 +47,10 @@
 }
 
 .admin-btn,
-.logout-btn {
+.logout-btn,
+.users-btn,
+.notification-btn,
+.create-job-btn {
   padding: 0.5rem 1rem;
   border: none;
   border-radius: 6px;
