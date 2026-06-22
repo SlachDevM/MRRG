@@ -41,36 +41,38 @@ New users follow the activation workflow below.
 ```text
 Administrator
 
-↓
+   ↓
 
 Create User
 
-↓
+   ↓
 
 PENDING_ACTIVATION
 
-↓
+   ↓
 
 Activation Email
 
-↓
+   ↓
 
-Android Deep Link
+Activation Link
 
-↓
+   ↓
 
 Choose Password
 
-↓
+   ↓
 
 ACTIVE
 
-↓
+   ↓
 
 Login
 ```
 
 Accounts can be disabled at any time without deleting business data, ensuring that historical records remain intact while preventing future authentication.
+
+The activation link can be opened from either the React web application or the Android application, depending on the configured deployment.
 
 ---
 
@@ -82,10 +84,11 @@ Examples include:
 
 * validating user permissions;
 * enforcing job workflow transitions;
+* validating worker assignments;
 * controlling account activation;
 * protecting administrative operations.
 
-Client applications are responsible only for presenting information and collecting user input.
+Client applications are responsible for presenting information, guiding users through business workflows and collecting user input. The backend remains responsible for validating every operation.
 
 ---
 
@@ -112,6 +115,8 @@ The following design decisions contribute to the overall security of the applica
 * User accounts must be activated before authentication is permitted.
 * Business rules are enforced server-side for every request.
 * Notifications are persisted before being delivered, preventing data loss if push delivery fails.
+* Stable user identifiers are used internally for permissions and worker assignments instead of display names.
+* Client applications may guide the user interface but never replace backend business validation.
 
 These principles reduce the risk of inconsistent behaviour between clients while ensuring that sensitive business operations remain under backend control.
 
