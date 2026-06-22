@@ -2,19 +2,21 @@
 
 ## User Login
 
-Test 1: On the login page of MRRG, use a correct email address and an incorrect password, then click on the log in button. The user should remain on the same page with the displayed error message "Incorrect email or password".
+Test 1: On the login page, use a correct email address and an incorrect password, then click on the log in button. The user should remain on the same page with the displayed error message "Incorrect email or password".
 
-Test 2: On the login page of MRRG, use an incorrect email address and an incorrect password, then click on the log in button. The user should remain on the same page with the displayed error message "Incorrect email or password".
+Test 2: On the login page, use an incorrect email address and password, then click on the log in button. The user should remain on the same page with the displayed error message "Incorrect email or password".
 
-Test 3: On the login page of MRRG, use a correct email address and the correct password, then click on the log in button. The user should connect to the app and access the dashboard with his username displayed in the top left corner of the window.
+Test 3: On the login page, leave empty email or password, then click on the log in button. The user should remain on the same page with the displayed error message "Please enter a valid email and password".
 
-Test 4: On the login page of MRRG, use the email address of a disabled user and the correct password, then click on the log in button. The user should remain on the login page and should not access the application.
+Test 4: On the login page, use a correct email address and the correct password, then click on the log in button. The user should connect to the app and access the dashboard with his username displayed in the top left corner of the window.
 
-Test 5: On the login page of MRRG, use the email address of a pending activation user and the correct password, then click on the log in button. The user should remain on the login page and should not access the application.
+Test 5: On the login page, use the email address of a disabled user and the correct password, then click on the log in button. The user should remain on the login page and should not access the application and an error message "Your account is currently disabled. Please contact an administrator" should be displayed.
 
-Test 6: Log in successfully, then refresh the browser page. The user should remain authenticated and stay inside the application.
+Test 6: On the login page, use the email address of a pending activation user and any password, then click on the log in button. The user should remain on the login page with the displayed error message "Incorrect email or password" and should not access the application.
 
-Test 7: Log in successfully, then click on the logout button. The user should be redirected to the login page and should not be able to access protected pages using the browser back button.
+Test 7: Log in successfully, then refresh the browser page. The user should remain authenticated and stay inside the application.
+
+Test 8: Log in successfully, then click on the logout button. The user should be redirected to the login page and should not be able to access protected pages using the browser back button.
 
 ---
 
@@ -22,19 +24,31 @@ Test 7: Log in successfully, then click on the logout button. The user should be
 
 Test 1: As an admin, open the user management page and create a new employee with a valid email address, name and role. The new user should appear in the user list with the status "Pending Activation".
 
-Test 2: As an admin, try to create a user with an email address that already exists. The user should not be created and an error message should be displayed.
+Test 2: As an admin, try to create a user with an email address that already exists. The user should not be created and "A user already exists with this email" should be displayed.
 
-Test 3: As an admin, deactivate an active user. The user should remain visible in the user list with the status "Disabled".
+Test 3: As an admin, deactivate an active user. The user should remain visible in the user list with the status "Disabled". User should be removed from all current assigned jobs.
 
-Test 4: As an admin, try to log in with a disabled user account. The login should fail and the user should not access the application.
+Test 4: As an admin, reactivate a disabled user who had already activated his account before. The user status should become "Active".
 
-Test 5: As an admin, reactivate a disabled user who had already activated his account before. The user status should become "Active".
+Test 5: As an admin, deactivate a user who never activated his account. The user status should become "Disabled".
 
-Test 6: As an admin, reactivate a disabled user who never activated his account. The user status should become "Pending Activation".
+Test 6: As an admin, reactivate a disabled user who never activated his account. The user status should become "Pending" and a new activation email should be sent
 
-Test 7: As an admin, click resend activation for a pending activation user. A new activation email should be generated and visible in Mailpit in local development.
+Test 7: As an admin, click resend activation for a pending activation user. A new activation email should be generated.
 
-Test 8: As a manager or employee, try to access the user management page directly by URL. Access should be denied.
+Test 8: As an admin, update the email address of a user. An email should be sent to both old and new email address to notify the change.
+
+Test 9 As an admin, update name of a user. The new user name should be displayed everywhere it is referenced in the app. (Mostly in user list, assigned job)
+
+Test 10: As a manager or employee, try to access the user management page directly by URL. Access should be denied.
+
+Test 11: As an admin, deactivate an active worker assigned to a Scheduled job. The worker should be removed from the job, the job should remain Scheduled, and the job date should remain unchanged.
+
+Test 12: As an admin, deactivate an active worker assigned to a Done job. The worker should remain visible on the Done job for historical traceability.
+
+Test 13: As an admin, deactivate an active worker assigned to an Archived job. The worker should remain visible on the Archived job for historical traceability.
+
+Test 14: As an admin, open the job assignment modal. Disabled and pending activation users should not appear in the assignable worker list.
 
 ---
 
@@ -44,11 +58,13 @@ Test 1: Create a new user as admin, open the activation email in Mailpit, then o
 
 Test 2: On the activation page, enter a valid password and confirm it. The account should be activated and the user should be able to log in.
 
-Test 3: On the activation page, enter two different passwords. The account should not be activated and an error message should be displayed.
+Test 3: On the activation page, enter two different passwords. The account should not be activated and an error message "Passwords do not match." should be displayed.
 
-Test 4: Try to reuse an activation link after the account has already been activated. The activation should fail or be rejected.
+Test 4: Try to reuse an activation link after the account has already been activated. The activation should fail and the page should display "Activation token has already been used.".
 
-Test 5: Try to activate an account with an invalid token. The activation should fail and the user should not be activated.
+Test 5: Try to activate an account with an invalid token. The activation should fail and the page should display "Invalid activation token.".
+
+Test 6: Open the activation page with a valid token. The password form should be visible.
 
 ---
 
@@ -58,11 +74,13 @@ Test 1: As a manager or admin, create a new job with all required client and job
 
 Test 2: Try to create a job with missing required information. The job should not be created and validation errors should be displayed.
 
-Test 3: Create a job with a valid job date in `yyyy-MM-dd` format. The job should appear on the correct calendar day without timezone shift.
+Test 3: Create a job with a valid job date in `yyyy-MM-dd` format. The job should appear on the correct calendar day.
 
 Test 4: Create several jobs for different dates. Each job should appear only on its correct scheduled date.
 
 Test 5: Refresh the page after creating a job. The job should still be visible with the same information.
+
+Test 6: Create a valid job with no start date. The job should be displayed in the pool "Pending & To Be Fixed Jobs" below the week schedule.
 
 ---
 
@@ -70,29 +88,27 @@ Test 5: Refresh the page after creating a job. The job should still be visible w
 
 Test 1: As a manager or admin, assign a pending job to one or more workers and schedule it for a date. The job status should become "Scheduled".
 
-Test 2: Try to schedule a job without assigning any worker. The action should be rejected or blocked.
+Test 2: Reschedule an existing scheduled job to another date. The job should move to the new date and should no longer appear on the old date.
 
-Test 3: Reschedule an existing scheduled job to another date. The job should move to the new date and should no longer appear on the old date.
+Test 3: Open the weekly view after scheduling multiple jobs. Jobs should appear on the correct days.
 
-Test 4: Assign a job to a disabled worker if possible through the UI. The action should be rejected or the disabled worker should not be selectable.
-
-Test 5: Open the weekly view after scheduling multiple jobs. Jobs should appear on the correct days.
+Test 4: Drag and drop job from the pool to a day of the week. The job detail should be updated.
 
 ---
 
 ## Job Workflow
 
-Test 1: As a field worker on Android, open an assigned scheduled job and start the job. The job status should become "In Progress".
+Test 1: As a field worker on Android, open an assigned scheduled job and add a before photo. The job status should become "In Progress".
 
-Test 2: Complete the job from Android with the required completion information. The job status should become "Waiting Manager Validation".
+Test 2: As a field worker on Android, open an assigned in progress job and add a after photo. This should display the "complete" job button.
 
-Test 3: As a manager on React, validate a completed job. The job status should become "Completed" or move to the done jobs section according to the current workflow.
+Test 3: As a field worker on Android, open an assigned in progress with an after photo already added and click the complete button. The job should become "Waiting for validation".
 
-Test 4: As a manager, reject or request a fix for a completed job if the workflow supports it. The job should return to the appropriate correction state.
+Test 4: As a manager on React, validate a completed job. The job status should become "Completed" and move to the done jobs section according to the current workflow.
 
 Test 5: Archive a completed job. The job should disappear from active job lists and appear in the archive.
 
-Test 6: Create a callback from an archived job. The archived job should be restored for follow-up work and should not create a duplicate new job.
+Test 6: Create a callback from an archived job. The archived job should be restored for follow-up work and should not create a duplicate new job. The job should also reset assigned workers.
 
 ---
 
@@ -104,7 +120,7 @@ Test 2: Archive a done job. The job should move from Done Jobs to Archive.
 
 Test 3: Open the Archive section. Archived jobs should be visible with their previous information.
 
-Test 4: Trigger a callback on an archived job. The same job should return to the active workflow instead of creating a new job.
+Test 4: Trigger a callback on an archived job. The same job should return to the active workflow instead of creating a new job. The job should also reset assigned workers.
 
 Test 5: Refresh the browser after archiving or restoring a job. The job should remain in the correct state.
 
@@ -118,13 +134,15 @@ Test 2: Open the notification center as the assigned worker. The new notificatio
 
 Test 3: Mark one notification as read. The notification should be displayed as read and the unread count should decrease.
 
-Test 4: Mark all notifications as read. The unread count should become zero.
+Test 4: Click on a notification should open the update window of the job that has been notified.
 
-Test 5: Disable Firebase or simulate FCM failure, then trigger a notification. The notification should still be saved and visible in the notification center.
+Test 5: Mark all notifications as read. The unread count should become zero.
 
-Test 6: Log in on Android and verify that the FCM token is sent to the backend.
+Test 6: Disable Firebase or simulate FCM failure, then trigger a notification. The notification should still be saved and visible in the notification center.
 
-Test 7: Simulate a refreshed FCM token while the user is logged in. The backend should receive and store the new token.
+Test 7: Log in on Android and verify that the FCM token is sent to the backend.
+
+Test 8: Simulate a refreshed FCM token while the user is logged in. The backend should receive and store the new token.
 
 ---
 
@@ -138,7 +156,7 @@ Test 3: Log in on Android, close the app, then reopen it. The user should remain
 
 Test 4: Log out on Android, then reopen the app. The user should remain logged out.
 
-Test 5: Disable the user from the web admin panel, then try to use the Android app with the existing session. Backend-protected actions should be rejected.
+Test 5: Disable the user from the web admin panel, then try to use the Android app with the existing session. Should display "Your account is currently disabled. Please contact an administrator".
 
 ---
 
@@ -162,11 +180,9 @@ Test 1: Open a job requiring photos and take a before photo. The photo should be
 
 Test 2: Take an after photo and complete the job. The photos should be sent to the backend when online.
 
-Test 3: Try to complete a job without required photos if photos are mandatory. The app should prevent completion or display a clear validation message.
+Test 3: Take photos while offline. The app should store them safely and synchronize them when the network is restored.
 
-Test 4: Take photos while offline. The app should store them safely and synchronize them when the network is restored.
-
-Test 5: Deny camera permission, then try to take a photo. The app should display a clear message and should not crash.
+Test 4: Deny camera permission, then try to take a photo. The app should display a clear message and should not crash.
 
 ---
 
@@ -188,9 +204,9 @@ Test 5: Verify that technical timestamps such as `createdAt` and `updatedAt` sti
 
 Test 1: Log in as admin. The user should access user management, job management and administration features.
 
-Test 2: Log in as manager. The user should access manager job workflows but should not have full admin-only access if restricted.
+Test 2: Log in as manager. The user should access manager job workflows, user page in readonly mode and admin page.
 
-Test 3: Log in as employee. The user should only access assigned work and employee-allowed actions.
+Test 3: Log in as employee. The user should only access assigned work and dashboard with the week schedule.
 
 Test 4: Try to call an admin-only backend endpoint using a non-admin token. The backend should reject the request.
 
