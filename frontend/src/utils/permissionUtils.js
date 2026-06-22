@@ -1,12 +1,15 @@
 import { JOB_STATUSES } from '../constants/jobConfig';
 
-export function getJobPermissions(job, user, isAssignedWorker) {
+export function getJobPermissions(job, user, isAssignedWorker, { afterPhotoCount } = {}) {
   const canManage = user?.role === 'MANAGER' || user?.role === 'ADMIN';
   const isArchived = job?.status === JOB_STATUSES.ARCHIVED;
   const isDone = job?.status === JOB_STATUSES.DONE;
   const isInProgress = job?.status === JOB_STATUSES.IN_PROGRESS;
   const isCallbackOnly = isArchived || isDone;
   const awaitingConfirmation = job?.status === JOB_STATUSES.READY_FOR_CONFIRMATION;
+  const hasAfterPhotos = afterPhotoCount != null
+    ? afterPhotoCount > 0
+    : Array.isArray(job?.afterPhotos) && job.afterPhotos.length > 0;
 
   return {
     canManage,
@@ -24,6 +27,7 @@ export function getJobPermissions(job, user, isAssignedWorker) {
       job?.id &&
       !canManage &&
       isAssignedWorker &&
+      hasAfterPhotos &&
       (job?.status === JOB_STATUSES.IN_PROGRESS || job?.status === JOB_STATUSES.TO_BE_FIXED),
     canConfirm: job?.id && canManage && job?.status === JOB_STATUSES.READY_FOR_CONFIRMATION,
     canArchive: job?.id && canManage && !isArchived,

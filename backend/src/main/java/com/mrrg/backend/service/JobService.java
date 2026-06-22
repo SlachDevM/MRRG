@@ -147,17 +147,15 @@ public class JobService {
                 }
             }
         } else {
-            boolean hasPhotoUpdate =
-                    (jobUpdate.getBeforePhotos() != null && !jobUpdate.getBeforePhotos().isEmpty())
-                            || (jobUpdate.getAfterPhotos() != null && !jobUpdate.getAfterPhotos().isEmpty());
+            boolean hasBeforePhotoUpdate = hasBeforePhotos(jobUpdate);
+            boolean hasAfterPhotoUpdate = hasAfterPhotos(jobUpdate);
             boolean hasNotesUpdate = jobUpdate.getNotes() != null;
-            if (!hasPhotoUpdate && !hasNotesUpdate) {
+            if (!hasBeforePhotoUpdate && !hasAfterPhotoUpdate && !hasNotesUpdate) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No updates provided");
             }
             applyWorkerPhotoUpdate(job, jobUpdate);
-            
-            // Transition to IN_PROGRESS when worker adds photo or notes to a SCHEDULED job
-            if (job.getStatus() == JobStatus.SCHEDULED && (hasPhotoUpdate || hasNotesUpdate)) {
+
+            if (job.getStatus() == JobStatus.SCHEDULED && hasBeforePhotoUpdate) {
                 job.setStatus(JobStatus.IN_PROGRESS);
             }
         }
@@ -189,6 +187,13 @@ public class JobService {
         
         if (!isManager && !isWorker) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+
+        if (!hasAfterPhotos(job)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "At least one after photo is required before completing the job."
+            );
         }
 
         job.setStatus(JobStatus.READY_FOR_CONFIRMATION);
@@ -407,6 +412,14 @@ public class JobService {
         if (jobUpdate.getNotes() != null) {
             job.setNotes(jobUpdate.getNotes());
         }
+    }
+
+    private boolean hasBeforePhotos(Job job) {
+        return job.getBeforePhotos() != null && !job.getBeforePhotos().isEmpty();
+    }
+
+    private boolean hasAfterPhotos(Job job) {
+        return job.getAfterPhotos() != null && !job.getAfterPhotos().isEmpty();
     }
 
     private void applyPhotoListUpdate(Job job, Job jobUpdate) {

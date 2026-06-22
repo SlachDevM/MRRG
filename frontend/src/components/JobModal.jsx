@@ -179,7 +179,12 @@ export default function JobModal({
   if (!isOpen) return null;
 
   const isAssignedWorker = currentUserId && selectedWorkers.includes(currentUserId);
-  const permissions = getJobPermissions(job, { role: canManage ? 'MANAGER' : 'WORKER' }, isAssignedWorker);
+  const permissions = getJobPermissions(
+    job,
+    { role: canManage ? 'MANAGER' : 'WORKER' },
+    isAssignedWorker,
+    { afterPhotoCount: afterPhotos.length }
+  );
   const {
     isArchived,
     isDone,
@@ -731,7 +736,7 @@ export default function JobModal({
               )}
               {!canManage && isEdit && isAssignedWorker && jobStatus === JOB_STATUSES.SCHEDULED && (
                 <p className="job-modal-hint" style={{ color: '#ff9800', fontWeight: 'bold' }}>
-                  📸 Add photos or notes to start the job (move to In Progress)
+                  📸 Add a before photo to start the job (move to In Progress)
                 </p>
               )}
               {canComplete && (

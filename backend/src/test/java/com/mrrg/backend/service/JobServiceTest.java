@@ -109,6 +109,7 @@ class JobServiceTest {
         job.setStatus(JobStatus.SCHEDULED);
         job.setAssignedWorkers("2");  // Worker ID 2
         job.setCreatedBy(1L);
+        job.setAfterPhotos(List.of("after-photo.jpg"));
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -381,7 +382,7 @@ class JobServiceTest {
     }
 
     @Test
-    void update_shouldTransitionToInProgress_whenAssignedWorkerUploadsAfterPhotos() {
+    void update_shouldNotTransitionToInProgress_whenAssignedWorkerUploadsAfterPhotosOnly() {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
@@ -396,13 +397,13 @@ class JobServiceTest {
 
         Job result = jobService.update(10L, update, 2L);
 
-        assertThat(result.getStatus()).isEqualTo(JobStatus.IN_PROGRESS);
+        assertThat(result.getStatus()).isEqualTo(JobStatus.SCHEDULED);
         assertThat(result.getAfterPhotos()).hasSize(1);
         verify(jobRepository).save(existingJob);
     }
 
     @Test
-    void update_shouldTransitionToInProgress_whenAssignedWorkerAddsNotes() {
+    void update_shouldNotTransitionToInProgress_whenAssignedWorkerAddsNotesOnly() {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
@@ -417,9 +418,29 @@ class JobServiceTest {
 
         Job result = jobService.update(10L, update, 2L);
 
-        assertThat(result.getStatus()).isEqualTo(JobStatus.IN_PROGRESS);
+        assertThat(result.getStatus()).isEqualTo(JobStatus.SCHEDULED);
         assertThat(result.getNotes()).isEqualTo("Job in progress, gutters cleaned");
         verify(jobRepository).save(existingJob);
+    }
+
+    @Test
+    void update_shouldNotChangeStatus_whenAssignedWorkerAddsNotesToInProgressJob() {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.IN_PROGRESS);
+        existingJob.setAssignedWorkers("2");
+
+        Job update = new Job();
+        update.setNotes("Updated note");
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(2L)).thenReturn(false);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 2L);
+
+        assertThat(result.getStatus()).isEqualTo(JobStatus.IN_PROGRESS);
+        assertThat(result.getNotes()).isEqualTo("Updated note");
     }
 
     @Test
@@ -473,6 +494,7 @@ class JobServiceTest {
         job.setStatus(JobStatus.IN_PROGRESS);
         job.setAssignedWorkers("2");  // Worker ID 2
         job.setCreatedBy(1L);
+        job.setAfterPhotos(List.of("after-photo.jpg"));
 
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
@@ -488,6 +510,25 @@ class JobServiceTest {
                 NotificationType.JOB_READY_FOR_CONFIRMATION,
                 "Job Test Client is ready for confirmation"
         );
+    }
+
+    @Test
+    void markReadyForConfirmation_shouldRejectCompletionWithoutAfterPhoto() {
+        Job job = sampleJob();
+        job.setId(10L);
+        job.setStatus(JobStatus.IN_PROGRESS);
+        job.setAssignedWorkers("2");
+        job.setCreatedBy(1L);
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(userService.isManagerOrAdmin(2L)).thenReturn(false);
+
+        assertThatThrownBy(() -> jobService.markReadyForConfirmation(10L, 2L))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("At least one after photo is required");
+
+        verify(jobRepository, never()).save(any(Job.class));
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
     }
 
     @Test
