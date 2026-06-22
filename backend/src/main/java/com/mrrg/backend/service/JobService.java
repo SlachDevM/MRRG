@@ -11,7 +11,6 @@ import com.mrrg.backend.model.UserRole;
 import com.mrrg.backend.model.UserStatus;
 import com.mrrg.backend.repository.JobRepository;
 import com.mrrg.backend.repository.UserRepository;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +27,6 @@ import java.util.stream.Collectors;
 
 @Service
 @Transactional
-@Slf4j
 public class JobService {
 
     private static final List<JobStatus> NON_FINAL_STATUSES = Arrays.asList(

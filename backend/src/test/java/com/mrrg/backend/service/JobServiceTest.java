@@ -137,7 +137,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(job, 3L);  // Worker ID 3
+        assignWorkersToJob(job, 3L);
 
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
@@ -154,7 +154,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.READY_FOR_CONFIRMATION);
-        assignWorkersToJob(job, 2L);  // Worker ID 2
+        assignWorkersToJob(job, 2L);
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -398,7 +398,7 @@ class JobServiceTest {
     void update_shouldAllowAssignedWorkerToUploadPhotos() {
         Job existingJob = sampleJob();
         existingJob.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setBeforePhotos(List.of("before-photo.jpg"));
@@ -416,7 +416,7 @@ class JobServiceTest {
     void update_shouldRejectWorkerUpdateWithoutPhotos() {
         Job existingJob = sampleJob();
         existingJob.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
 
@@ -539,14 +539,12 @@ class JobServiceTest {
         return job;
     }
 
-    // ==================== IN_PROGRESS Feature Tests ====================
-
     @Test
     void update_shouldTransitionToInProgress_whenAssignedWorkerUploadsBeforePhotos() {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64EncodedPhoto1", "base64EncodedPhoto2"));
@@ -567,7 +565,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setAfterPhotos(List.of("base64EncodedPhoto1"));
@@ -588,7 +586,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setNotes("Job in progress, gutters cleaned");
@@ -629,7 +627,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64Photo"));
@@ -652,7 +650,7 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.PENDING);
-        assignWorkersToJob(existingJob, 2L);  // Worker ID 2
+        assignWorkersToJob(existingJob, 2L);
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64Photo"));
@@ -673,7 +671,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.IN_PROGRESS);
-        assignWorkersToJob(job, 2L);  // Worker ID 2
+        assignWorkersToJob(job, 2L);
         job.setCreatedBy(1L);
         job.setAfterPhotos(List.of("after-photo.jpg"));
 
@@ -717,7 +715,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.PENDING);
-        assignWorkersToJob(job, 2L);  // Worker ID 2
+        assignWorkersToJob(job, 2L);
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);

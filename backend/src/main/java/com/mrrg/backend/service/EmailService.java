@@ -26,7 +26,7 @@ public class EmailService {
     /**
      * Sends an account activation email to the user.
      * In development, logs the activation link instead of sending email.
-     * In production, would use Spring Mail to send the actual email.
+     * In production, sends via Spring Mail.
      *
      * SECURITY: Activation tokens are NEVER logged in production environments.
      * They are only logged in dev/development/local profiles for testing purposes.

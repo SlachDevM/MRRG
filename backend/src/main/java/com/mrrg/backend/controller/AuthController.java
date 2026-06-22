@@ -5,7 +5,6 @@ import com.mrrg.backend.dto.LoginRequest;
 import com.mrrg.backend.dto.LoginResponse;
 import com.mrrg.backend.dto.RegisterRequest;
 import com.mrrg.backend.service.AuthService;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
