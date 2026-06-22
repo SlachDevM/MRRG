@@ -46,7 +46,7 @@ New functionality should integrate with existing business workflows whenever pos
 
 For example:
 
-- extend the job lifecycle instead of creating parallel workflows;
+- extend existing domain models rather than introducing duplicate entities or relationships.
 - reuse notifications rather than introducing additional messaging systems;
 - extend existing user roles before creating new authorization models.
 
@@ -83,6 +83,7 @@ When modifying the project:
 - keep responsibilities explicit;
 - avoid duplicate business logic;
 - remove dead code when it is discovered.
+- prefer existing abstractions before introducing new ones.
 
 Consistency is generally more valuable than individual optimisation.
 
