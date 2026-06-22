@@ -9,7 +9,6 @@ import apiClient from '../services/apiClient';
 import { JOB_STATUSES, API_ENDPOINTS } from '../constants/jobConfig';
 import { getMonday } from '../utils/dateUtils';
 import '../styles/Dashboard.css';
-import '../styles/JobModal.css';
 
 export default function MainDashboard() {
   const navigate = useNavigate();

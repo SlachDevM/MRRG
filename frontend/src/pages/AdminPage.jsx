@@ -8,7 +8,6 @@ import jobApi from '../services/jobApi';
 import { API_ENDPOINTS } from '../constants/jobConfig';
 import '../styles/AdminPage.css';
 import '../styles/Dashboard.css';
-import '../styles/JobModal.css';
 
 const formatJobDate = (dateStr) => {
   if (!dateStr) return '-';
