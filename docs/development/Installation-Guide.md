@@ -16,7 +16,7 @@
 
 2. **Start local development environment:**
    ```bash
-   docker compose up --build
+     docker compose up --build -d
    ```
 
    This brings up:
@@ -47,7 +47,7 @@ Local development uses:
 - **Database**: Local PostgreSQL with auto-schema update (`ddl-auto=update`)
 - **Email**: Mailpit (development only, no real SMTP)
 - **Firebase**: Optional (configure `firebase-service-account.json` if needed)
-- **Profiles**: `dev` profile active by default
+- **Profiles**: `dev` profile active by default, Automatic database initialization with development seed data.
 
 ### Android Development
 
@@ -94,7 +94,7 @@ Production deployment uses a separate configuration:
 
 5. **Configure database:**
    - Set `SPRING_JPA_HIBERNATE_DDL_AUTO=validate` in `.env`
-   - Implement proper database migration strategy (Flyway or Liquibase)
+   - Introduce a migration strategy such as Flyway or Liquibase before deploying to production.
    - Run migrations separately during deployment, not on startup
    - Set up regular backups of PostgreSQL volumes
 
@@ -186,5 +186,5 @@ docker compose up --build
 ## Additional Resources
 
 - Backend: [Software Architecture](../architecture/Software-Architecture.md)
-- Security: [Security Guide](../architecture/Security.md)
-- User Guide: [Administrator Guide](../user/Administrator-Guide.md)
+- Security Model: [Security Model](../architecture/Security.md)
+- Administrator Manual: [Administrator Manual](../user/Administrator-Manual.md)
