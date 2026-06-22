@@ -24,7 +24,7 @@ The same authentication mechanism is used by both the React web application and 
 
 Every protected request is authorized by the backend.
 
-Permissions are determined from the authenticated user's role and current account status before any business operation is executed.
+Permissions are determined from the authenticated user's role, account status and, where applicable, ownership or worker assignment before any business operation is executed.
 
 Because authorization is enforced centrally, business behaviour remains identical across every client application.
 
@@ -117,6 +117,7 @@ The following design decisions contribute to the overall security of the applica
 * Notifications are persisted before being delivered, preventing data loss if push delivery fails.
 * Stable user identifiers are used internally for permissions and worker assignments instead of display names.
 * Client applications may guide the user interface but never replace backend business validation.
+* Object-level authorization ensures that authenticated users can access or modify only the resources they are permitted to use.
 
 These principles reduce the risk of inconsistent behaviour between clients while ensuring that sensitive business operations remain under backend control.
 
