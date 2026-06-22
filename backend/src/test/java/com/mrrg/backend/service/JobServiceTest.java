@@ -1,6 +1,7 @@
 package com.mrrg.backend.service;
 
 import com.mrrg.backend.dto.CallbackFixRequest;
+import com.mrrg.backend.dto.JobResponseDto;
 import com.mrrg.backend.model.Job;
 import com.mrrg.backend.model.JobStatus;
 import com.mrrg.backend.model.NotificationType;
@@ -986,6 +987,49 @@ class JobServiceTest {
         assertThatThrownBy(() -> jobService.getById(99L, 2L))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("404");
+    }
+
+    @Test
+    void toJobResponse_shouldPopulateAssignedWorkerDetails() {
+        Job job = sampleJob();
+        job.setId(10L);
+        assignWorkersToJob(job, 2L, 3L);
+
+        User worker2 = new User("worker2@test.com", "password", "Alice Worker", UserRole.EMPLOYEE);
+        worker2.setId(2L);
+        User worker3 = new User("worker3@test.com", "password", "Bob Worker", UserRole.EMPLOYEE);
+        worker3.setId(3L);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker2));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(worker3));
+
+        JobResponseDto dto = jobService.toJobResponse(job);
+
+        assertThat(dto.getAssignedWorkers()).isEqualTo("2,3");
+        assertThat(dto.getAssignedWorkerDetails()).hasSize(2);
+        assertThat(dto.getAssignedWorkerDetails().get(0).getId()).isEqualTo(2L);
+        assertThat(dto.getAssignedWorkerDetails().get(0).getName()).isEqualTo("Alice Worker");
+        assertThat(dto.getAssignedWorkerDetails().get(1).getId()).isEqualTo(3L);
+        assertThat(dto.getAssignedWorkerDetails().get(1).getName()).isEqualTo("Bob Worker");
+    }
+
+    @Test
+    void toJobResponse_shouldOmitMissingWorkersFromAssignedWorkerDetails() {
+        Job job = sampleJob();
+        job.setId(10L);
+        assignWorkersToJob(job, 2L, 99L);
+
+        User worker2 = new User("worker2@test.com", "password", "Alice Worker", UserRole.EMPLOYEE);
+        worker2.setId(2L);
+
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker2));
+        when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+        JobResponseDto dto = jobService.toJobResponse(job);
+
+        assertThat(dto.getAssignedWorkers()).isEqualTo("2,99");
+        assertThat(dto.getAssignedWorkerDetails()).hasSize(1);
+        assertThat(dto.getAssignedWorkerDetails().get(0).getId()).isEqualTo(2L);
     }
 
     private User workerWithId(long id) {

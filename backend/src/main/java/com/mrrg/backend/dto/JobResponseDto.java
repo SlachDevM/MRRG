@@ -38,7 +38,7 @@ public class JobResponseDto {
 
     /**
      * Convert Job entity to response DTO.
-     * Note: assignedWorkerDetails must be populated separately by the controller/service.
+     * Note: assignedWorkerDetails is populated by JobService when building the response DTO.
      */
     public JobResponseDto(Job job) {
         this.id = job.getId();

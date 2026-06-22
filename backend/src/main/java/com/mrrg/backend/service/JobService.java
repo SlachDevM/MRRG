@@ -1,6 +1,8 @@
 package com.mrrg.backend.service;
 
 import com.mrrg.backend.dto.CallbackFixRequest;
+import com.mrrg.backend.dto.JobResponseDto;
+import com.mrrg.backend.dto.UserSummary;
 import com.mrrg.backend.model.Job;
 import com.mrrg.backend.model.JobStatus;
 import com.mrrg.backend.model.NotificationType;
@@ -20,7 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -305,6 +309,27 @@ public class JobService {
             job.setUpdatedAt(System.currentTimeMillis());
             jobRepository.save(job);
         }
+    }
+
+    public JobResponseDto toJobResponse(Job job) {
+        JobResponseDto dto = new JobResponseDto(job);
+        dto.setAssignedWorkerDetails(resolveAssignedWorkerDetails(job));
+        return dto;
+    }
+
+    public List<JobResponseDto> toJobResponses(List<Job> jobs) {
+        return jobs.stream()
+                .map(this::toJobResponse)
+                .collect(Collectors.toList());
+    }
+
+    private List<UserSummary> resolveAssignedWorkerDetails(Job job) {
+        return job.getAssignedWorkerIds().stream()
+                .map(userRepository::findById)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(UserSummary::new)
+                .collect(Collectors.toList());
     }
 
     private Job getJobOrThrow(Long id) {
