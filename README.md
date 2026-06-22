@@ -32,11 +32,21 @@ The backend is shared by two clients:
 
 ---
 
+## Design Philosophy
+
+MRRG follows a backend-centric architecture.
+
+Business rules, authorization, workflow validation and data consistency are enforced exclusively by the Spring Boot backend.
+
+The React and Android applications act as specialized clients sharing the same business logic through a common REST API.
+
+---
+
 ## Related Projects
 
-MRRG-Mobile – Android application for field workers.
+MRRG-Mobile – Android companion application for field workers built with Kotlin and Jetpack Compose.
 
-https://github.com/SlachDevM/MRRG-Mobile
+[MRRG-Mobile](https://github.com/SlachDevM/MRRG-Mobile)
 
 ---
 
@@ -48,10 +58,10 @@ Additional project documentation is available in the `docs/` directory.
 |----------|-------------|
 | Project Philosophy | Design principles and development philosophy |
 | Software Architecture | High-level architecture of the MRRG ecosystem |
-| Security | Security model and authentication strategy |
+| Security Model | Security model and authentication strategy |
 | Installation Guide | Local development environment setup |
 | Maintenance Guide | Guidance for maintaining and extending the project |
-| Administrator Guide | Business administration workflows |
+| Administrator Manual | Business administration workflows |
 | User Manual | Android application guide for field workers |
 
 ---
@@ -76,7 +86,10 @@ This platform centralizes those processes into a single application.
 - Re-open and priority escalation system  
 - Real-time notifications  
 - Role-based access control  
-- Dynamic job status workflow  
+- Dynamic job status workflow
+- Secure account activation workflow
+- Offline-first Android support
+- Callback management with job restoration
 
 ---
 
@@ -135,6 +148,8 @@ This platform centralizes those processes into a single application.
 - Docker Compose for reproducible development and deployment environments.
 - Role-based authorization to enforce business rules.
 - User account lifecycle is modeled explicitly with `PENDING_ACTIVATION`, `ACTIVE` and `DISABLED` statuses.
+- Stable entity relationships are modeled using JPA associations rather than mutable display values.
+- Client applications guide user interactions but never enforce business rules.
 
 ---
 
@@ -197,11 +212,11 @@ Callback
 
 - Managers create roofing jobs.
 - Jobs are scheduled and assigned to employees.
-- Employees upload before photos directly from the field that trigger job to In progress status.
-- Employees upload after photos and complete the work.
+- Employees upload at least one before photo, automatically moving the job to In Progress.
+- Employees upload at least one after photo before submitting the job for manager validation.
 - Managers validate completed jobs.
 - Validated jobs are archived.
-- Customer callbacks automatically restore archived jobs to the scheduling queue with elevated priority.
+- Customer callbacks restore archived jobs to the workflow with elevated priority and without assigned workers, allowing managers to choose the most appropriate team for the follow-up work.
 
 ---
 
@@ -224,7 +239,8 @@ Callback
 - Archive and restore jobs
 
 ### Employee 
-- View assigned work
+- View active work schedule
+- View details of assigned jobs
 - Upload before/after photos
 - Add job notes
 - Mark assigned jobs as completed
@@ -232,8 +248,13 @@ Callback
 ---
 
 ## Notifications
-- Managers are notified when employees complete assigned jobs.
-- Employees are notified when jobs are assigned or rescheduled.
+
+Managers are notified when employees complete assigned jobs.
+
+Employees are notified when:
+- jobs are assigned;
+- schedules change;
+- important job updates occur.
 
 ---
 
@@ -244,7 +265,7 @@ git clone https://github.com/SlachDevM/MRRG.git
 
 cd MRRG
 
-docker compose up --build
+docker compose up --build -d
 ```
 
 After starting the application:
@@ -262,7 +283,9 @@ After starting the application:
 
 ## Testing
 
-Backend services are covered with unit tests using JUnit 5 and Mockito.
+Backend services are extensively covered with unit tests using JUnit 5 and Mockito.
+
+More than 160 automated tests validate authentication, user lifecycle, business workflows, notifications and security rules.
 
 Tested areas include:
 - Authentication
@@ -321,6 +344,6 @@ Tested areas include:
 
 This repository is publicly available for demonstration and portfolio purposes.
 
-The MRRG application and its business logic were developed for the Margaret River Re-Gutter business and remain proprietary.
+The MRRG application and its business logic were developed for the Margaret River Re-Gutter business and remain the intellectual property of Margaret River Re-Gutter.
 
 Source code is published to showcase software engineering practices and architecture, but redistribution or commercial use of the application is not permitted without permission.
