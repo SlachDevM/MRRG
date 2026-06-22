@@ -430,6 +430,76 @@ class JobServiceTest {
     }
 
     @Test
+    void update_shouldPreserveDetailsAndNotes_whenManagerUpdatesArchivedJobWithPartialPayload() {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.ARCHIVED);
+        existingJob.setDetails("Original details");
+        existingJob.setNotes("Original notes");
+        existingJob.setBeforePhotos(List.of("before.jpg"));
+
+        Job update = new Job();
+        update.setBeforePhotos(List.of("before.jpg", "before-2.jpg"));
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getDetails()).isEqualTo("Original details");
+        assertThat(result.getNotes()).isEqualTo("Original notes");
+        assertThat(result.getBeforePhotos()).containsExactly("before.jpg", "before-2.jpg");
+        verify(jobRepository).save(existingJob);
+    }
+
+    @Test
+    void update_shouldPreserveDetailsAndNotes_whenManagerSendsNullTextFieldsOnArchivedJob() {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.DONE);
+        existingJob.setDetails("Original details");
+        existingJob.setNotes("Original notes");
+
+        Job update = new Job();
+        update.setDetails(null);
+        update.setNotes(null);
+        update.setAfterPhotos(List.of("after.jpg"));
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getDetails()).isEqualTo("Original details");
+        assertThat(result.getNotes()).isEqualTo("Original notes");
+        assertThat(result.getAfterPhotos()).containsExactly("after.jpg");
+    }
+
+    @Test
+    void update_shouldUpdateDetailsAndNotes_whenManagerProvidesNonNullValuesOnArchivedJob() {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.ARCHIVED);
+        existingJob.setDetails("Original details");
+        existingJob.setNotes("Original notes");
+
+        Job update = new Job();
+        update.setDetails("Updated details");
+        update.setNotes("Updated notes");
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getDetails()).isEqualTo("Updated details");
+        assertThat(result.getNotes()).isEqualTo("Updated notes");
+    }
+
+    @Test
     void assignWorkers_shouldSaveWorkersAndNotifyThem_whenUserIsManager() {
         Job job = sampleJob();
         job.setId(10L);

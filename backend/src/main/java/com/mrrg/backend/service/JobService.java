@@ -458,8 +458,12 @@ public class JobService {
     }
 
     private void applyManagerSupplementaryUpdate(Job job, Job jobUpdate) {
-        job.setDetails(jobUpdate.getDetails());
-        job.setNotes(jobUpdate.getNotes());
+        if (jobUpdate.getDetails() != null) {
+            job.setDetails(jobUpdate.getDetails());
+        }
+        if (jobUpdate.getNotes() != null) {
+            job.setNotes(jobUpdate.getNotes());
+        }
         applyPhotoListUpdate(job, jobUpdate);
     }
 
