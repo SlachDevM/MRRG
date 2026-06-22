@@ -157,7 +157,7 @@ PENDING_ACTIVATION
 Activation Email
    │
    ▼
-Android Deep Link
+Android Deep Link / React Web
    │
    ▼
 Choose Password
@@ -197,8 +197,8 @@ Callback
 
 - Managers create roofing jobs.
 - Jobs are scheduled and assigned to employees.
-- Employees upload before photos directly from the field.
-- Employees complete the work and upload after photos.
+- Employees upload before photos directly from the field that trigger job to In progress status.
+- Employees upload after photos and complete the work.
 - Managers validate completed jobs.
 - Validated jobs are archived.
 - Customer callbacks automatically restore archived jobs to the scheduling queue with elevated priority.
