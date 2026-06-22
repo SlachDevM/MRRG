@@ -2,6 +2,7 @@ package com.mrrg.backend.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.ApplicationListener;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -10,6 +11,11 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
+@ConditionalOnProperty(
+        name = "app.database-schema-updater.enabled",
+        havingValue = "true",
+        matchIfMissing = false
+)
 public class DatabaseSchemaUpdater implements ApplicationListener<ApplicationReadyEvent> {
     private static final Logger log = LoggerFactory.getLogger(DatabaseSchemaUpdater.class);
 

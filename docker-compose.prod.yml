@@ -25,6 +25,9 @@ services:
       
       # Hibernate
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+
+      # Schema updater must remain disabled in production
+      APP_DATABASE_SCHEMA_UPDATER_ENABLED: "false"
       
       # JWT
       JWT_SECRET: ${JWT_SECRET}

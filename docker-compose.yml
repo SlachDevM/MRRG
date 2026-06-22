@@ -9,6 +9,7 @@ services:
       - SPRING_DATASOURCE_USERNAME=mrrg
       - SPRING_DATASOURCE_PASSWORD=mrrgpass
       - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - APP_DATABASE_SCHEMA_UPDATER_ENABLED=true
       - JWT_SECRET=local-dev-secret-change-me
       - FIREBASE_SERVICE_ACCOUNT_PATH=/app/firebase-service-account.json
       - SPRING_MAIL_HOST=mailpit
