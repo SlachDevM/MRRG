@@ -18,7 +18,7 @@ export default function Login() {
     e.preventDefault();
     setError('');
 
-    const trimmedEmail = email.trim();
+    const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
 
     if (!trimmedEmail || !trimmedPassword || !EMAIL_PATTERN.test(trimmedEmail)) {
@@ -35,7 +35,13 @@ export default function Login() {
       login(data, data.token);
       navigate('/');
     } catch (err) {
-      setError('Email or password is incorrect.');
+      // Display backend-provided error message for disabled/pending accounts
+      if (err.message && (err.message.includes('disabled') || err.message.includes('not activated'))) {
+        setError(err.message);
+      } else {
+        // Generic message for all other login failures
+        setError('Email or password is incorrect.');
+      }
     }
   };
 

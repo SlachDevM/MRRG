@@ -69,8 +69,11 @@ export default function NotificationPage() {
   const handleMarkAllAsRead = async () => {
     try {
       await apiClient.put(`${API_ENDPOINTS.NOTIFICATIONS}/read-all`, {});
+      // Immediately update local state without refetching
+      setNotifications((prev) =>
+        prev.map((n) => ({ ...n, isRead: true }))
+      );
       clearUnread();
-      fetchNotifications();
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }

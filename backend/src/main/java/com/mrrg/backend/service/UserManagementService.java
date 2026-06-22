@@ -121,14 +121,19 @@ public class UserManagementService {
         }
 
         // Update email if provided and different
-        if (request.getEmail() != null && !request.getEmail().isBlank() && !request.getEmail().equals(oldEmail)) {
-            // Check for duplicate email
-            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already in use");
-            }
+        if (request.getEmail() != null && !request.getEmail().isBlank()) {
+            String newEmail = request.getEmail().trim().toLowerCase();
+            String oldEmailNormalized = oldEmail.trim().toLowerCase();
+            
+            if (!newEmail.equals(oldEmailNormalized)) {
+                // Check for duplicate email
+                if (userRepository.findByEmail(newEmail).isPresent()) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A user already exists with this email.");
+                }
 
-            user.setEmail(request.getEmail());
-            emailChanged = true;
+                user.setEmail(newEmail);
+                emailChanged = true;
+            }
         }
 
         user.setUpdatedAt(System.currentTimeMillis());

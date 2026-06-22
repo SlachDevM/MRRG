@@ -254,6 +254,7 @@ export default function MainDashboard() {
         canManage={canManage}
 
         currentUserName={auth?.user?.name ?? ''}
+        currentUserId={auth?.user?.id}
 
       />
 

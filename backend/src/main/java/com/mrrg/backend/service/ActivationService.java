@@ -57,24 +57,27 @@ public class ActivationService {
         User creator = userRepository.findById(creatorId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Creator not found"));
 
+        // Normalize email
+        String normalizedEmail = email != null ? email.trim().toLowerCase() : "";
+
         // Validate creator permissions
         validateCreatorPermissions(creator, requestedRole);
 
         // Check for duplicate email
-        if (userRepository.findByEmail(email).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A user already exists with this email.");
         }
 
         // Validate inputs
         if (name == null || name.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Name cannot be blank");
         }
-        if (email == null || email.isBlank()) {
+        if (normalizedEmail.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email cannot be blank");
         }
 
         // Create inactive user
-        User newUser = new User(email, "", name, requestedRole);
+        User newUser = new User(normalizedEmail, "", name, requestedRole);
         newUser.setEnabled(false);
         User savedUser = userRepository.save(newUser);
 
@@ -85,9 +88,9 @@ public class ActivationService {
         tokenRepository.save(activationToken);
 
         // Send activation email
-        emailService.sendActivationEmail(email, token, name);
+        emailService.sendActivationEmail(normalizedEmail, token, name);
 
-        log.info("Employee invitation created for email: {} by user: {}", email, creator.getId());
+        log.info("Employee invitation created for email: {} by user: {}", normalizedEmail, creator.getId());
         return savedUser;
     }
 

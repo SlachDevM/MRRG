@@ -33,6 +33,9 @@ class JobServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private com.mrrg.backend.repository.UserRepository userRepository;
+
     @InjectMocks
     private JobService jobService;
 
@@ -56,7 +59,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setJobDate(LocalDate.of(2026, 3, 10));
         job.setJobStartHour("08:00");
-        job.setAssignedWorkers("John Worker");
+        job.setAssignedWorkers("2");
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -67,7 +70,7 @@ class JobServiceTest {
             savedJob.setId(10L);
             return savedJob;
         });
-        when(userService.findByName("John Worker")).thenReturn(List.of(worker));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
 
         Job result = jobService.create(job, 1L);
 
@@ -98,14 +101,13 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.SCHEDULED);
-        job.setAssignedWorkers("John Worker");
+        job.setAssignedWorkers("2");  // Worker ID 2
         job.setCreatedBy(1L);
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
 
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(job)).thenReturn(job);
 
@@ -126,7 +128,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.SCHEDULED);
-        job.setAssignedWorkers("Another Worker");
+        job.setAssignedWorkers("3");  // Worker ID 3
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -147,7 +149,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.READY_FOR_CONFIRMATION);
-        job.setAssignedWorkers("John Worker");
+        job.setAssignedWorkers("2");  // Worker ID 2
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -155,7 +157,7 @@ class JobServiceTest {
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(jobRepository.save(job)).thenReturn(job);
-        when(userService.findByName("John Worker")).thenReturn(List.of(worker));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
 
         Job result = jobService.markDone(10L, 1L);
 
@@ -277,16 +279,12 @@ class JobServiceTest {
     void update_shouldAllowAssignedWorkerToUploadPhotos() {
         Job existingJob = sampleJob();
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("before-photo.jpg"));
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(existingJob)).thenReturn(existingJob);
 
@@ -299,15 +297,11 @@ class JobServiceTest {
     void update_shouldRejectWorkerUpdateWithoutPhotos() {
         Job existingJob = sampleJob();
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
 
         assertThatThrownBy(() -> jobService.update(10L, update, 2L))
@@ -328,11 +322,11 @@ class JobServiceTest {
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
         when(jobRepository.save(job)).thenReturn(job);
-        when(userService.findByName("John Worker")).thenReturn(List.of(worker));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
 
-        Job result = jobService.assignWorkers(10L, "John Worker", 1L);
+        Job result = jobService.assignWorkers(10L, "2", 1L);
 
-        assertThat(result.getAssignedWorkers()).isEqualTo("John Worker");
+        assertThat(result.getAssignedWorkers()).isEqualTo("2");
 
         verify(notificationService).create(
                 2L,
@@ -362,16 +356,12 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64EncodedPhoto1", "base64EncodedPhoto2"));
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -387,16 +377,12 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
         update.setAfterPhotos(List.of("base64EncodedPhoto1"));
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -412,16 +398,12 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
         update.setNotes("Job in progress, gutters cleaned");
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -437,17 +419,13 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.SCHEDULED);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64Photo"));
         update.setNotes("Starting job now");
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -464,16 +442,12 @@ class JobServiceTest {
         Job existingJob = sampleJob();
         existingJob.setId(10L);
         existingJob.setStatus(JobStatus.PENDING);
-        existingJob.setAssignedWorkers("John Worker");
+        existingJob.setAssignedWorkers("2");  // Worker ID 2
 
         Job update = new Job();
         update.setBeforePhotos(List.of("base64Photo"));
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -489,14 +463,10 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.IN_PROGRESS);
-        job.setAssignedWorkers("John Worker");
+        job.setAssignedWorkers("2");  // Worker ID 2
         job.setCreatedBy(1L);
 
-        User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
-        worker.setId(2L);
-
         when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
-        when(userService.getById(2L)).thenReturn(worker);
         when(userService.isManagerOrAdmin(2L)).thenReturn(false);
         when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -517,7 +487,7 @@ class JobServiceTest {
         Job job = sampleJob();
         job.setId(10L);
         job.setStatus(JobStatus.PENDING);
-        job.setAssignedWorkers("John Worker");
+        job.setAssignedWorkers("2");  // Worker ID 2
 
         User worker = new User("worker@test.com", "password", "John Worker", UserRole.EMPLOYEE);
         worker.setId(2L);
@@ -529,5 +499,69 @@ class JobServiceTest {
                 .hasMessageContaining("400");
 
         verify(jobRepository, never()).save(any(Job.class));
+    }
+
+    @Test
+    void jobIsWorkerAssigned_shouldReturnTrue_whenUserIdInAssignedList() {
+        Job job = new Job();
+        job.setAssignedWorkers("1,3,7");
+
+        assertThat(job.isWorkerAssigned(3L)).isTrue();
+        assertThat(job.isWorkerAssigned(1L)).isTrue();
+        assertThat(job.isWorkerAssigned(7L)).isTrue();
+    }
+
+    @Test
+    void jobIsWorkerAssigned_shouldReturnFalse_whenUserIdNotInAssignedList() {
+        Job job = new Job();
+        job.setAssignedWorkers("1,3,7");
+
+        assertThat(job.isWorkerAssigned(2L)).isFalse();
+        assertThat(job.isWorkerAssigned(99L)).isFalse();
+    }
+
+    @Test
+    void getAssignedWorkerIds_shouldParseCommaDelimitedIds() {
+        Job job = new Job();
+        job.setAssignedWorkers("1,3,7");
+
+        List<Long> ids = job.getAssignedWorkerIds();
+
+        assertThat(ids).containsExactly(1L, 3L, 7L);
+    }
+
+    @Test
+    void setAssignedWorkerIds_shouldCreateCommaDelimitedString() {
+        Job job = new Job();
+        job.setAssignedWorkerIds(List.of(1L, 3L, 7L));
+
+        assertThat(job.getAssignedWorkers()).isEqualTo("1,3,7");
+    }
+
+    @Test
+    void setAssignedWorkerIds_shouldSetToNull_whenListEmpty() {
+        Job job = new Job();
+        job.setAssignedWorkerIds(List.of());
+
+        assertThat(job.getAssignedWorkers()).isNull();
+    }
+
+    @Test
+    void userNameChange_shouldNotBreakAssignment() {
+        Job job = new Job();
+        job.setId(10L);
+        job.setClientName("Test Job");
+        job.setStatus(JobStatus.SCHEDULED);
+        job.setAssignedWorkers("1,3,7");
+
+        // User ID 3 changes their name from "John Smith" to "John Smith Jr."
+        // The job should still work because it's based on ID, not name
+        User worker = new User("worker@test.com", "password", "John Smith Jr.", UserRole.EMPLOYEE);
+        worker.setId(3L);
+
+        // Assignment check should still work
+        assertThat(job.isWorkerAssigned(3L)).isTrue();
+        // Even though name changed
+        assertThat(worker.getName()).isEqualTo("John Smith Jr.");
     }
 }

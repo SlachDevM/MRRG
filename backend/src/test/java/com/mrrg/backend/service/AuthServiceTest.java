@@ -153,4 +153,65 @@ class AuthServiceTest {
 
         verify(userRepository, never()).save(any(User.class));
     }
+
+    @Test
+    void login_shouldThrowForbidden_withDisabledMessage_whenAccountIsDisabled() {
+        User user = new User("disabled@test.com", "encoded-password", "Disabled User", UserRole.EMPLOYEE);
+        user.setId(5L);
+        user.setEnabled(false);
+
+        when(userRepository.findByEmail("disabled@test.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password", "encoded-password")).thenReturn(true);
+        when(tokenRepository.hasValidTokenByUserId(eq(5L), anyLong())).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(
+                new LoginRequest("disabled@test.com", "password")
+        ))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("disabled")
+                .hasMessageContaining("administrator");
+
+        verify(tokenProvider, never()).generateToken(anyLong(), anyString());
+    }
+
+    @Test
+    void login_shouldNormalizeEmail_beforeLookup() {
+        User user = new User("test@example.com", "encoded-password", "Test User", UserRole.EMPLOYEE);
+        user.setId(6L);
+        user.setEnabled(true);
+
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("password", "encoded-password")).thenReturn(true);
+        when(tokenProvider.generateToken(6L, "test@example.com")).thenReturn("jwt-token");
+
+        authService.login(new LoginRequest("TEST@EXAMPLE.COM ", "password"));
+
+        verify(userRepository).findByEmail("test@example.com");
+    }
+
+    @Test
+    void register_shouldNormalizeEmailAndStoreInLowercase() {
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail(" NEW@TEST.COM ");
+        request.setPassword("password");
+        request.setName("New User");
+        request.setRole(null);
+
+        when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode("password")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User saved = invocation.getArgument(0);
+            saved.setId(11L);
+            return saved;
+        });
+        when(tokenProvider.generateToken(11L, "new@test.com")).thenReturn("jwt-token");
+
+        authService.register(request);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+
+        User savedUser = userCaptor.getValue();
+        assertThat(savedUser.getEmail()).isEqualTo("new@test.com");
+    }
 }

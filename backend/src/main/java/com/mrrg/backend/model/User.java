@@ -41,7 +41,7 @@ public class User {
     }
 
     public User(String email, String password, String name, UserRole role) {
-        this.email = email;
+        this.email = email != null ? email.trim().toLowerCase() : null;
         this.password = password;
         this.name = name;
         this.role = role;
@@ -63,7 +63,7 @@ public class User {
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        this.email = email != null ? email.trim().toLowerCase() : null;
     }
 
     public String getPassword() {

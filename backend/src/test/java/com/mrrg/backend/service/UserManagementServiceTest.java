@@ -412,4 +412,60 @@ class UserManagementServiceTest {
 
         assertThat(status).isEqualTo(UserStatus.DISABLED);
     }
+
+    @Test
+    void updateUser_shouldNormalizeEmailToLowercase() {
+        User admin = new User("admin@test.com", "password", "Admin", UserRole.ADMIN);
+        admin.setId(1L);
+
+        User userToUpdate = new User("old@test.com", "password", "Test User", UserRole.EMPLOYEE);
+        userToUpdate.setId(2L);
+        userToUpdate.setEnabled(true);
+
+        UpdateUserRequest request = new UpdateUserRequest();
+        request.setName("Updated Name");
+        request.setEmail("NEW@TEST.COM");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(userToUpdate));
+        when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenAnswer(i -> i.getArguments()[0]);
+        lenient().when(tokenRepository.hasValidTokenByUserId(eq(2L), anyLong())).thenReturn(false);
+        lenient().doNothing().when(emailService).sendEmailChangeNotification(anyString(), anyString(), anyString());
+
+        userManagementService.updateUser(2L, request, 1L);
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+
+        User savedUser = userCaptor.getValue();
+        assertThat(savedUser.getEmail()).isEqualTo("new@test.com");
+    }
+
+    @Test
+    void updateUser_shouldThrowBadRequest_withClearMessage_whenDuplicateEmailExists() {
+        User admin = new User("admin@test.com", "password", "Admin", UserRole.ADMIN);
+        admin.setId(1L);
+
+        User userToUpdate = new User("old@test.com", "password", "Test User", UserRole.EMPLOYEE);
+        userToUpdate.setId(2L);
+        userToUpdate.setEnabled(true);
+
+        User existingUser = new User("new@test.com", "password", "Existing User", UserRole.EMPLOYEE);
+        existingUser.setId(3L);
+
+        UpdateUserRequest request = new UpdateUserRequest();
+        request.setName("Updated Name");
+        request.setEmail("NEW@TEST.COM");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(admin));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(userToUpdate));
+        when(userRepository.findByEmail("new@test.com")).thenReturn(Optional.of(existingUser));
+
+        assertThatThrownBy(() -> 
+            userManagementService.updateUser(2L, request, 1L)
+        )
+        .isInstanceOf(ResponseStatusException.class)
+        .hasMessageContaining("already exists with this email");
+    }
 }

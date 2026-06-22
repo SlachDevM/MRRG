@@ -85,6 +85,7 @@ export default function JobModal({
   prefilledDate = null,
   canManage = false,
   currentUserName = '',
+  currentUserId = null,
 }) {
   const isEdit = Boolean(job?.id);
   const [form, setForm] = useState(EMPTY_JOB_FORM);
@@ -154,8 +155,10 @@ export default function JobModal({
           jobStartHour: fullJob.jobStartHour || '07:50',
         });
         setSelectedTypes(fullJob.jobTypes ? fullJob.jobTypes.split(',').filter(Boolean) : []);
+        // Load assigned worker IDs from backend (format: "1,3,7")
+        // Convert to numbers for comparison
         setSelectedWorkers(
-          fullJob.assignedWorkers ? fullJob.assignedWorkers.split(',').filter(Boolean) : []
+          fullJob.assignedWorkers ? fullJob.assignedWorkers.split(',').filter(Boolean).map(Number) : []
         );
         setJobStatus(fullJob.status || null);
         setBeforePhotos(parsePhotosFromJob(fullJob, 'beforePhotos', 'beforePhoto'));
@@ -175,9 +178,7 @@ export default function JobModal({
 
   if (!isOpen) return null;
 
-  const isAssignedWorker = selectedWorkers.some(
-    (name) => name.trim().toLowerCase() === currentUserName.trim().toLowerCase()
-  );
+  const isAssignedWorker = currentUserId && selectedWorkers.includes(currentUserId);
   const permissions = getJobPermissions(job, { role: canManage ? 'MANAGER' : 'WORKER' }, isAssignedWorker);
   const {
     isArchived,
@@ -204,9 +205,9 @@ export default function JobModal({
     );
   };
 
-  const toggleWorker = (name) => {
+  const toggleWorker = (workerId) => {
     setSelectedWorkers((prev) =>
-      prev.includes(name) ? prev.filter((w) => w !== name) : [...prev, name]
+      prev.includes(workerId) ? prev.filter((id) => id !== workerId) : [...prev, workerId]
     );
   };
 
@@ -618,7 +619,7 @@ export default function JobModal({
                 <fieldset className="job-types-fieldset">
                   <legend>Assign Workers</legend>
                   {!canManage && selectedWorkers.length > 0 ? (
-                    <p className="job-modal-hint">{selectedWorkers.join(', ')}</p>
+                    <p className="job-modal-hint">{workers.filter(w => selectedWorkers.includes(w.id)).map(w => w.name).join(', ')}</p>
                   ) : workers.length === 0 ? (
                     <p className="job-modal-hint">No workers available.</p>
                   ) : (
@@ -627,8 +628,8 @@ export default function JobModal({
                         <label key={worker.id} className="job-type-option">
                           <input
                             type="checkbox"
-                            checked={selectedWorkers.includes(worker.name)}
-                            onChange={() => toggleWorker(worker.name)}
+                            checked={selectedWorkers.includes(worker.id)}
+                            onChange={() => toggleWorker(worker.id)}
                             disabled={isCoreReadOnly}
                           />
                           {worker.name}

@@ -38,7 +38,8 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.UNAUTHORIZED,
                         "Invalid email or password"
@@ -55,7 +56,7 @@ public class AuthService {
             if (status == UserStatus.PENDING_ACTIVATION) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is not activated");
             } else if (status == UserStatus.DISABLED) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account is disabled");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Your account is currently disabled. Please contact an administrator.");
             }
         }
 
@@ -63,12 +64,13 @@ public class AuthService {
     }
 
     public LoginResponse register(RegisterRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists");
         }
 
         User user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(normalizedEmail);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setName(request.getName());
         user.setRole(request.getRole() != null ? request.getRole() : UserRole.EMPLOYEE);

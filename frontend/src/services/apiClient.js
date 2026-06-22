@@ -34,7 +34,26 @@ class ApiClient {
       const response = await fetch(url, config);
 
       if (!response.ok) {
-        const error = new Error(`API request failed: ${response.status}`);
+        // Try to extract error message from response body
+        let message = `API request failed: ${response.status}`;
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            if (errorData.message) {
+              message = errorData.message;
+            } else if (errorData.detail) {
+              message = errorData.detail;
+            }
+          } else {
+            const text = await response.text();
+            if (text) message = text;
+          }
+        } catch (e) {
+          // If parsing fails, use default message
+        }
+
+        const error = new Error(message);
         error.status = response.status;
         error.statusText = response.statusText;
 
@@ -44,6 +63,8 @@ class ApiClient {
           error.type = 'FORBIDDEN';
         } else if (response.status === 404) {
           error.type = 'NOT_FOUND';
+        } else if (response.status === 400) {
+          error.type = 'BAD_REQUEST';
         } else if (response.status >= 500) {
           error.type = 'SERVER_ERROR';
         }
@@ -51,8 +72,18 @@ class ApiClient {
         throw error;
       }
 
-      const data = await response.json();
-      return data;
+      // Handle 204 No Content and other empty responses
+      if (response.status === 204 || response.headers.get('content-length') === '0') {
+        return null;
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        return data;
+      }
+
+      return null;
     } catch (err) {
       if (err instanceof TypeError) {
         err.type = 'NETWORK_ERROR';

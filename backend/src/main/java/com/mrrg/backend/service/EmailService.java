@@ -134,30 +134,53 @@ public class EmailService {
 
     private void sendEmailChangeViaSMTP(String oldEmail, String newEmail, String userName) {
         try {
-            // Send notification to old email
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(fromEmail);
-            message.setTo(oldEmail);
-            message.setSubject("Email Address Changed - MRRG Account");
-            message.setText(buildEmailChangeNotificationBody(userName, oldEmail, newEmail));
+            // Send security notification to old email
+            SimpleMailMessage oldEmailMessage = new SimpleMailMessage();
+            oldEmailMessage.setFrom(fromEmail);
+            oldEmailMessage.setTo(oldEmail);
+            oldEmailMessage.setSubject("Email Address Changed - MRRG Account Security Notice");
+            oldEmailMessage.setText(buildOldEmailNotificationBody(userName, oldEmail, newEmail));
             
-            mailSender.send(message);
-            log.info("Email change notification sent to old email: {}", oldEmail);
+            mailSender.send(oldEmailMessage);
+            log.info("Email change security notification sent to old email: {}", oldEmail);
+            
+            // Send confirmation to new email
+            SimpleMailMessage newEmailMessage = new SimpleMailMessage();
+            newEmailMessage.setFrom(fromEmail);
+            newEmailMessage.setTo(newEmail);
+            newEmailMessage.setSubject("Email Address Updated - MRRG Account");
+            newEmailMessage.setText(buildNewEmailNotificationBody(userName, oldEmail, newEmail));
+            
+            mailSender.send(newEmailMessage);
+            log.info("Email change confirmation sent to new email: {}", newEmail);
         } catch (Exception e) {
-            log.error("Failed to send email change notification to {}: {}", oldEmail, e.getMessage(), e);
+            log.error("Failed to send email change notifications: {}", e.getMessage(), e);
         }
     }
 
-    private String buildEmailChangeNotificationBody(String userName, String oldEmail, String newEmail) {
+    private String buildOldEmailNotificationBody(String userName, String oldEmail, String newEmail) {
         return String.format(
             "Hello %s,\n\n" +
-            "This is a security notification to inform you that your email address has been changed.\n\n" +
-            "Old Email: %s\n" +
+            "SECURITY NOTICE: The email address associated with your MRRG account has been changed.\n\n" +
+            "Previous Email: %s\n" +
             "New Email: %s\n\n" +
             "If you did not authorize this change, please contact an administrator immediately.\n\n" +
             "Best regards,\n" +
             "MRRG Team",
             userName, oldEmail, newEmail
+        );
+    }
+
+    private String buildNewEmailNotificationBody(String userName, String oldEmail, String newEmail) {
+        return String.format(
+            "Hello %s,\n\n" +
+            "Your MRRG account email address has been successfully updated.\n\n" +
+            "New Email: %s\n\n" +
+            "This email address is now associated with your account. If you did not request this change, " +
+            "please contact an administrator immediately.\n\n" +
+            "Best regards,\n" +
+            "MRRG Team",
+            userName, newEmail
         );
     }
 }
