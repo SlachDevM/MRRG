@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import authApi from '../services/authApi';
 import '../styles/ActivateAccount.css';
+
+const INVALID_LINK_MESSAGE =
+  'Activation link is invalid. Please use the link from your invitation email.';
 
 export default function ActivateAccount() {
   const [searchParams] = useSearchParams();
@@ -10,17 +13,46 @@ export default function ActivateAccount() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [tokenStatus, setTokenStatus] = useState(token ? 'validating' : 'invalid');
+  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setTokenStatus('invalid');
+      setError(INVALID_LINK_MESSAGE);
+      return;
+    }
+
+    let cancelled = false;
+
+    const validateToken = async () => {
+      setTokenStatus('validating');
+      setError('');
+
+      try {
+        await authApi.validateActivationToken(token);
+        if (!cancelled) {
+          setTokenStatus('valid');
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setTokenStatus('invalid');
+          setError(err.message || 'Activation link is invalid.');
+        }
+      }
+    };
+
+    validateToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    if (!token) {
-      setError('Activation link is invalid. Please use the link from your invitation email.');
-      return;
-    }
 
     const trimmedPassword = password.trim();
     const trimmedConfirm = confirmPassword.trim();
@@ -36,15 +68,18 @@ export default function ActivateAccount() {
     }
 
     try {
-      setLoading(true);
+      setSubmitting(true);
       await authApi.activateAccount(token, trimmedPassword);
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Account activation failed. Please try again.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  const showPasswordForm = tokenStatus === 'valid' && !success;
+  const showTokenError = tokenStatus === 'invalid' && !success;
 
   return (
     <div className="activate-container">
@@ -65,53 +100,58 @@ export default function ActivateAccount() {
               Go to Login
             </Link>
           </div>
+        ) : tokenStatus === 'validating' ? (
+          <div className="activate-loading">Validating activation link...</div>
+        ) : showTokenError ? (
+          <div className="activate-error-state">
+            <div className="error-message">{error}</div>
+            <Link to="/login" className="activate-link-button">
+              Go to Login
+            </Link>
+          </div>
         ) : (
           <>
-            {!token && (
-              <div className="error-message">
-                Activation link is invalid. Please use the link from your invitation email.
-              </div>
-            )}
-
             {error && <div className="error-message">{error}</div>}
 
-            <form onSubmit={handleSubmit} noValidate>
-              <div className="form-group">
-                <label htmlFor="password">Password</label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={!token || loading}
-                  placeholder="Choose a password"
-                  autoComplete="new-password"
-                />
-              </div>
+            {showPasswordForm && (
+              <form onSubmit={handleSubmit} noValidate>
+                <div className="form-group">
+                  <label htmlFor="password">Password</label>
+                  <input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={submitting}
+                    placeholder="Choose a password"
+                    autoComplete="new-password"
+                  />
+                </div>
 
-              <div className="form-group">
-                <label htmlFor="confirmPassword">Confirm Password</label>
-                <input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  disabled={!token || loading}
-                  placeholder="Confirm your password"
-                  autoComplete="new-password"
-                />
-              </div>
+                <div className="form-group">
+                  <label htmlFor="confirmPassword">Confirm Password</label>
+                  <input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={submitting}
+                    placeholder="Confirm your password"
+                    autoComplete="new-password"
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="submit-button"
-                disabled={!token || loading}
-              >
-                {loading ? 'Activating...' : 'Activate Account'}
-              </button>
-            </form>
+                <button
+                  type="submit"
+                  className="submit-button"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Activating...' : 'Activate Account'}
+                </button>
+              </form>
+            )}
           </>
         )}
       </div>

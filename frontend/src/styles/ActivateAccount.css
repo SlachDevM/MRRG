@@ -49,6 +49,20 @@
   text-align: center;
 }
 
+.activate-loading,
+.activate-error-state {
+  text-align: center;
+}
+
+.activate-loading {
+  color: #1a472a;
+  margin: 0;
+}
+
+.activate-error-state .activate-link-button {
+  margin-top: 0.5rem;
+}
+
 .activate-success p {
   color: #1a472a;
   margin: 0 0 1.5rem;

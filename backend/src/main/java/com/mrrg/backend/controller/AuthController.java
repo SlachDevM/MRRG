@@ -43,6 +43,12 @@ public class AuthController {
         return ResponseEntity.ok(authService.activateAccount(request.getToken(), request.getPassword()));
     }
 
+    @GetMapping("/activation-token/validate")
+    public ResponseEntity<Void> validateActivationToken(@RequestParam("token") String token) {
+        authService.validateActivationToken(token);
+        return ResponseEntity.noContent().build();
+    }
+
     /**
      * Determines if public registration endpoint is enabled based on active profile.
      * Registration is only enabled in development profiles (dev, development, local).

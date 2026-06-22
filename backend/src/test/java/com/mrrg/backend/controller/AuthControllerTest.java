@@ -140,4 +140,17 @@ class AuthControllerTest {
         assertThat(response.getBody()).isEqualTo(expectedResponse);
         verify(authService).activateAccount("activation-token-12345", "newpassword");
     }
+
+    @Test
+    void validateActivationToken_callsAuthServiceAndReturnsNoContent() {
+        AuthController.RegisterEndpointProperty property = new AuthController.RegisterEndpointProperty("dev");
+        AuthController controller = new AuthController(authService, property);
+
+        doNothing().when(authService).validateActivationToken("activation-token-12345");
+
+        var response = controller.validateActivationToken("activation-token-12345");
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(authService).validateActivationToken("activation-token-12345");
+    }
 }

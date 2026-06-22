@@ -96,6 +96,10 @@ public class AuthService {
         return buildLoginResponse(activatedUser);
     }
 
+    public void validateActivationToken(String token) {
+        activationService.validateActivationToken(token);
+    }
+
     /**
      * Computes the user's status based on enabled flag and activation tokens.
      * Used to provide more detailed error messages during login.

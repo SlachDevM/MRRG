@@ -95,6 +95,15 @@ public class ActivationService {
     }
 
     /**
+     * Validates an activation token without activating the account or modifying token state.
+     *
+     * @param token the activation token to validate
+     */
+    public void validateActivationToken(String token) {
+        requireUsableActivationToken(token);
+    }
+
+    /**
      * Activates a user account with a valid token and password.
      *
      * @param token the activation token
@@ -104,24 +113,11 @@ public class ActivationService {
     @Transactional
     public User activateAccount(String token, String password) {
         // Validate inputs
-        if (token == null || token.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Token is required");
-        }
         if (password == null || password.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Password is required");
         }
 
-        // Find token
-        AccountActivationToken activationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid token"));
-
-        // Validate token
-        if (activationToken.isExpired()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Activation token has expired");
-        }
-        if (activationToken.isUsed()) {
-            throw new ResponseStatusException(HttpStatus.GONE, "Activation token has already been used");
-        }
+        AccountActivationToken activationToken = requireUsableActivationToken(token);
 
         // Activate user
         User user = activationToken.getUser();
@@ -136,6 +132,24 @@ public class ActivationService {
 
         log.info("Account activated for user: {}", user.getId());
         return activatedUser;
+    }
+
+    private AccountActivationToken requireUsableActivationToken(String token) {
+        if (token == null || token.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid activation token.");
+        }
+
+        AccountActivationToken activationToken = tokenRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invalid activation token."));
+
+        if (activationToken.isExpired()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Activation token has expired.");
+        }
+        if (activationToken.isUsed()) {
+            throw new ResponseStatusException(HttpStatus.GONE, "Activation token has already been used.");
+        }
+
+        return activationToken;
     }
 
     private void validateCreatorPermissions(User creator, UserRole requestedRole) {
