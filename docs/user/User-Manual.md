@@ -24,7 +24,7 @@ After activation, the application can be accessed using the assigned email addre
 
 ## Dashboard
 
-The dashboard displays upcoming assigned work.
+The dashboard displays assigned work, grouped by day..
 
 Jobs are grouped by day and include the information required before arriving on site, including:
 
@@ -50,22 +50,36 @@ Each assigned job follows a predefined workflow.
 ```text
 Assigned
 
-↓
+   ↓
+
+Take BEFORE Photo
+
+   ↓
 
 In Progress
 
-↓
+   ↓
+
+Take AFTER Photo
+
+   ↓
+
+Submit
+
+   ↓
 
 Waiting Manager Validation
 
-↓
+   ↓  
 
 Completed
 ```
 
-Workers update the job as work progresses.
+Workers begin the job by uploading at least one before photo, which automatically moves the job to In Progress.
 
-Once the required work has been completed, the job is submitted for manager validation.
+During the work they may add notes whenever necessary. Notes provide additional information but do not affect the job status.
+
+Once the work has been completed, workers upload one or more after photos before submitting the job for manager validation.
 
 <img width="370" height="136" alt="image" src="https://github.com/user-attachments/assets/f94c3f96-330b-43c8-91f2-281407b59456" />
 <img width="436" height="904" alt="image" src="https://github.com/user-attachments/assets/d129c94b-bbd1-45e6-8f08-3498ab5281ef" />
@@ -77,11 +91,11 @@ Once the required work has been completed, the job is submitted for manager vali
 
 ## Before and After Photos
 
-Photographs provide a record of the completed work.
+Photographs provide a visual record of both the work site's initial condition and the completed work.
 
-Before photos should be captured before work begins.
+Before photos document the initial condition of the work site and must be captured before work begins. Uploading the first before photo automatically starts the job.
 
-After photos should be taken once the work has been completed.
+After photos document the completed work and are required before the job can be submitted for manager validation.
 
 These images are attached to the job and reviewed during manager validation.
 
@@ -138,3 +152,5 @@ For the best experience:
 - submit completed work promptly;
 - keep notifications enabled to receive scheduling updates;
 - keep the application up to date;
+- capture at least one before photo before starting work;
+- upload one or more after photos before submitting a job for validation;
