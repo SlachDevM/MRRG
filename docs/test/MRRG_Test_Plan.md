@@ -1,6 +1,6 @@
 # MRRG Manual Test Plan
 
-## User Login
+### User Login
 
 Test 1: On the login page, use a correct email address and an incorrect password, then click on the log in button. The user should remain on the same page with the displayed error message "Incorrect email or password".
 
@@ -20,7 +20,7 @@ Test 8: Log in successfully, then click on the logout button. The user should be
 
 ---
 
-## User Management
+### User Management
 
 Test 1: As an admin, open the user management page and create a new employee with a valid email address, name and role. The new user should appear in the user list with the status "Pending Activation".
 
@@ -52,7 +52,7 @@ Test 14: As an admin, open the job assignment modal. Disabled and pending activa
 
 ---
 
-## Account Activation
+### Account Activation
 
 Test 1: Create a new user as admin, open the activation email in Mailpit, then open the activation link. The activation page should be displayed.
 
@@ -68,7 +68,7 @@ Test 6: Open the activation page with a valid token. The password form should be
 
 ---
 
-## Job Creation
+### Job Creation
 
 Test 1: As a manager or admin, create a new job with all required client and job information. The job should be created with the status "Pending".
 
@@ -84,7 +84,7 @@ Test 6: Create a valid job with no start date. The job should be displayed in th
 
 ---
 
-## Job Scheduling
+### Job Scheduling
 
 Test 1: As a manager or admin, assign a pending job to one or more workers and schedule it for a date. The job status should become "Scheduled".
 
@@ -96,7 +96,7 @@ Test 4: Drag and drop job from the pool to a day of the week. The job detail sho
 
 ---
 
-## Job Workflow
+### Job Workflow
 
 Test 1: As a field worker on Android, open an assigned scheduled job and add a before photo. The job status should become "In Progress".
 
@@ -112,7 +112,7 @@ Test 6: Create a callback from an archived job. The archived job should be resto
 
 ---
 
-## Job Archive and Done Jobs
+### Job Archive and Done Jobs
 
 Test 1: As a manager, open the Done Jobs section. Completed jobs should be visible there.
 
@@ -126,7 +126,7 @@ Test 5: Refresh the browser after archiving or restoring a job. The job should r
 
 ---
 
-## Notifications
+### Notifications
 
 Test 1: Assign a job to a worker. A notification should be created for the assigned worker.
 
@@ -146,7 +146,7 @@ Test 8: Simulate a refreshed FCM token while the user is logged in. The backend 
 
 ---
 
-## Android Login and Session
+### Android Login and Session
 
 Test 1: On Android, use a correct email address and incorrect password. The user should remain on the login screen with an error message.
 
@@ -160,7 +160,7 @@ Test 5: Disable the user from the web admin panel, then try to use the Android a
 
 ---
 
-## Android Offline Behaviour
+### Android Offline Behaviour
 
 Test 1: Log in on Android while online, load assigned jobs, then turn off the network. Cached jobs should remain visible.
 
@@ -174,7 +174,7 @@ Test 5: Kill and reopen the Android app while offline. Cached data and pending a
 
 ---
 
-## Android Photos
+### Android Photos
 
 Test 1: Open a job requiring photos and take a before photo. The photo should be displayed correctly in the job detail screen.
 
@@ -186,7 +186,7 @@ Test 4: Deny camera permission, then try to take a photo. The app should display
 
 ---
 
-## Date Handling
+### Date Handling
 
 Test 1: Create a job in React for today. The job should appear on today’s date in React and Android.
 
@@ -200,7 +200,7 @@ Test 5: Verify that technical timestamps such as `createdAt` and `updatedAt` sti
 
 ---
 
-## Permissions and Roles
+### Permissions and Roles
 
 Test 1: Log in as admin. The user should access user management, job management and administration features.
 
@@ -214,7 +214,7 @@ Test 5: Hide a UI button in React, then try the same action directly through the
 
 ---
 
-## Production Configuration Smoke Tests
+### Production Configuration Smoke Tests
 
 Test 1: Start the local environment with Docker Compose. Backend, frontend, PostgreSQL and Mailpit should start successfully.
 
@@ -230,7 +230,7 @@ Test 6: Verify that production Hibernate configuration remains `validate`.
 
 ---
 
-## Regression Checklist Before Release
+### Regression Checklist Before Release
 
 Test 1: Run backend tests. All tests should pass.
 
@@ -247,3 +247,79 @@ Test 6: Search the codebase for obsolete `Task` references. No obsolete Task fea
 Test 7: Search the codebase for business job dates stored as timestamps. Business job dates should use `yyyy-MM-dd` / `LocalDate`.
 
 Test 8: Search the codebase for hardcoded secrets. No real secret should be committed.
+
+---
+
+## Security and Edge Case Regression Tests
+
+### Job Authorization
+
+Test 1: As an employee assigned to Job A, manually call the API to retrieve the details of Job B that is assigned to another employee. The backend should reject the request with the appropriate authorization error.
+
+Test 2: As an employee, attempt to modify a job that is not assigned to you using the API directly. The backend should reject the request regardless of any client-side validation.
+
+### Notification Ownership
+
+Test 3: As User A, attempt to mark a notification belonging to User B as read using the API directly. The backend should reject the request and the notification should remain unread.
+
+Test 4: As User A, attempt to retrieve or manipulate another user's notifications through direct API calls. Access should be denied.
+
+### Scheduled Jobs Without Workers
+
+Test 5: Create or edit a scheduled job and remove all assigned workers. The job should remain in the Scheduled state with its scheduled date unchanged and remain available for future worker assignment.
+
+### Disabled User Session
+
+Test 6: Log in successfully as an active employee. While the session is still active, disable the account from the administration interface. Attempt to continue using the application. Protected backend requests should fail and the user should no longer be allowed to continue working.
+
+### Double Action Protection
+
+Test 7: Rapidly trigger the same workflow action multiple times (Complete Job, Confirm Job, Archive Job or Callback). Only one successful operation should be processed and the final job state should remain consistent.
+
+### Browser Refresh During Workflow
+
+Test 8: Start an operation that changes job status, then refresh the browser immediately after the request completes. The displayed job information should remain consistent with the backend state after the page reloads.
+
+### Worker Removed During Active Session
+
+Test 9: Open an assigned job on Android as a field worker. While the application remains open, remove that worker from the job using the web application. Attempt to continue interacting with the job. The backend should reject any operation requiring assignment and the application should display the backend error message.
+
+---
+
+## Regression Tests for Recent Fixes
+
+### Partial Manager Update
+
+Test 1: As a manager, edit an Archived or Done job while modifying only photos or another unrelated field. Existing Details and Notes should remain unchanged unless explicitly modified.
+
+Test 2: As a manager, update Details and Notes on an Archived or Done job. The new values should be saved correctly.
+
+### Backend Error Messages
+
+Test 3: Trigger a backend business rule violation from the React application (for example, attempting to complete a job without any after photo). The specific backend error message should be displayed instead of a generic frontend error.
+
+Test 4: Trigger the same business rule violation from the Android application. The backend error message should be displayed clearly to the user.
+
+### Assigned Worker Details
+
+Test 5: Open jobs containing one or more assigned workers. Assigned worker names should still be displayed correctly after the DTO mapping refactoring.
+
+### Notification Ownership Regression
+
+Test 6: Mark one of your own notifications as read. The notification should be updated correctly and the unread counter should decrease.
+
+Test 7: Attempt to mark another user's notification as read using the API directly. The backend should reject the request.
+
+---
+
+## Production Safety Regression Tests
+
+Test 1: Start the backend using the production profile. DatabaseSchemaUpdater should not execute automatically.
+
+Test 2: Verify that Hibernate is configured with ddl-auto=validate in the production profile.
+
+Test 3: Verify that production CORS configuration does not allow unrestricted origins.
+
+Test 4: Start the application without mandatory production secrets. The application should fail safely without exposing sensitive information.
+
+Test 5: Verify that no development services (Mailpit, development SMTP configuration, schema updater, debug configuration) are enabled in the production environment.
