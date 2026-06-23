@@ -28,7 +28,17 @@
 
 3. **Login to the application:**
    - Navigate to http://localhost:3000
-   - Use credentials: `Mike@Admin.test` / `test` (admin user pre-created in dev database)
+   - Use the bootstrap administrator credentials:
+     - Email: `admin@mrrg.local`
+     - Password: `test`
+
+   On a fresh database, the backend creates this administrator automatically at startup when no `ADMIN` user exists yet. The credentials come from the `INITIAL_ADMIN_*` environment variables configured in `docker-compose.yml`. Passwords are hashed with the application's `PasswordEncoder` before persistence. The bootstrap is idempotent and does not recreate or reset an existing administrator.
+
+   To disable the bootstrap:
+
+   ```properties
+   app.bootstrap.initial-admin.enabled=false
+   ```
 
 ### Firebase Configuration (Optional)
 
@@ -48,6 +58,7 @@ Local development uses:
 - **Email**: Mailpit (development only, no real SMTP)
 - **Firebase**: Optional (configure `firebase-service-account.json` if needed)
 - **Profiles**: `dev` profile active by default, Automatic database initialization with development seed data.
+- **Initial admin bootstrap**: enabled by default in local Docker Compose via `INITIAL_ADMIN_*` variables
 
 ### Android Development
 

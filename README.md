@@ -15,7 +15,7 @@ Business Management Platform for Margaret River Re-Gutter
 
 ### Dashboard:  
 
-<img width="2840" height="1532" alt="image" src="https://github.com/user-attachments/assets/1e8b979a-e595-4dca-9341-4234b12a88e6" />
+<img width="2838" height="1508" alt="image" src="https://github.com/user-attachments/assets/47af2e86-5bb0-4d9c-9fab-714d30fc2230" />
 
 ---
 
@@ -274,6 +274,31 @@ After starting the application:
 - Frontend: `http://localhost:3000`
 - Swagger UI: `http://localhost:4000/swagger-ui/index.html`
 
+### Initial administrator
+
+On a fresh database, the backend automatically creates the first administrator account at startup when no `ADMIN` user exists yet.
+
+Default local credentials (from `docker-compose.yml`):
+
+| Setting | Value |
+|---|---|
+| Email | `admin@mrrg.local` |
+| Password | `test` |
+
+Configure the bootstrap with these environment variables:
+
+- `INITIAL_ADMIN_EMAIL`
+- `INITIAL_ADMIN_PASSWORD`
+- `INITIAL_ADMIN_NAME`
+
+The password is hashed with the application's `PasswordEncoder` before it is stored. The bootstrap is idempotent: if an `ADMIN` already exists, it does nothing and never resets an existing password.
+
+Disable the bootstrap with:
+
+```properties
+app.bootstrap.initial-admin.enabled=false
+```
+
 ---
 
 ## API Documentation
@@ -303,6 +328,7 @@ Tested areas include:
 
 <img width="1244" height="1498" alt="image" src="https://github.com/user-attachments/assets/3ffd18d2-9cee-4aa4-8eff-304891b4b015" />
 <img width="1252" height="748" alt="image" src="https://github.com/user-attachments/assets/597f8859-3009-486e-ba8a-f8314f3d5fda" />
+<img width="1254" height="1512" alt="image" src="https://github.com/user-attachments/assets/5e168306-3399-44d0-91d7-2e204a1d5795" />
 
 ### Scheduling
 
@@ -310,34 +336,33 @@ Tested areas include:
 
 ### Notifications 
 
-<img width="2828" height="1120" alt="image" src="https://github.com/user-attachments/assets/8acb316f-52b3-4d4d-ab2b-b53ff1de9f11" />
-<img width="2846" height="1100" alt="image" src="https://github.com/user-attachments/assets/0c74d028-87f9-4805-aefa-7d17a3e94289" />
+<img width="2802" height="1518" alt="image" src="https://github.com/user-attachments/assets/2cd77d84-d5ea-46ba-bffc-45cf38de9652" />
+<img width="2834" height="1520" alt="image" src="https://github.com/user-attachments/assets/2e0cde92-b1bd-48ba-9bcc-469d3b2dad62" />
 
 ### Validation 
 
-<img width="1270" height="1508" alt="image" src="https://github.com/user-attachments/assets/4a3ce536-2e6c-475e-840b-0b3d9138b6e3" />
-<img width="506" height="546" alt="image" src="https://github.com/user-attachments/assets/ea4af167-396a-4ab7-b5a6-ae26e3d33c2e" />
-<img width="2824" height="652" alt="image" src="https://github.com/user-attachments/assets/338e8302-dacc-42a0-a6fd-4c9fedfb9ab6" />
-<img width="1266" height="1514" alt="image" src="https://github.com/user-attachments/assets/fccf52fa-2dc5-43d7-a8ce-2ee26be8be98" />
+<img width="1242" height="1496" alt="image" src="https://github.com/user-attachments/assets/bdabb9ee-f46b-4ee6-9d16-2b3dd8708a37" />
+<img width="480" height="526" alt="image" src="https://github.com/user-attachments/assets/ef45badd-fec5-443f-ae7c-cbec30dd3cf1" />
+<img width="2852" height="858" alt="image" src="https://github.com/user-attachments/assets/d6e601fd-8cfb-4fde-a07d-12372702b3d7" />
+<img width="1238" height="1504" alt="image" src="https://github.com/user-attachments/assets/47bfbb5d-ffea-401b-a0e6-08fa03a28f95" />
 
 ### Administration 
 
-<img width="2832" height="768" alt="image" src="https://github.com/user-attachments/assets/753b05b5-4f53-40b0-99e8-c2e9aff4d6dc" />
-<img width="2850" height="860" alt="image" src="https://github.com/user-attachments/assets/8d8cf560-8059-46ba-b861-4a1fbd9e9f0f" />
+<img width="2838" height="1152" alt="image" src="https://github.com/user-attachments/assets/f31df653-4294-4a9c-8b62-226504c00c70" />
+<img width="2844" height="1024" alt="image" src="https://github.com/user-attachments/assets/67ead378-f46d-4cdb-9ab8-f4d45d9a4d6d" />
 
 ### User Management
 
-<img width="1124" height="958" alt="image" src="https://github.com/user-attachments/assets/faa8a2fb-56d6-467a-9efe-ab18c0b0bbae" />
-<img width="2840" height="768" alt="image" src="https://github.com/user-attachments/assets/0dd2bfa1-b138-4ce0-a371-9c4846b92a6e" />
-<img width="1478" height="994" alt="image" src="https://github.com/user-attachments/assets/c5d47bfb-aea1-47aa-9269-9b86e766da00" />
-<img width="972" height="1092" alt="image" src="https://github.com/user-attachments/assets/ac250514-5ea3-4abc-930b-7f07146f44ea" />
-<img width="974" height="816" alt="image" src="https://github.com/user-attachments/assets/38130dc0-a196-4a9c-858a-7eb6a7b1407f" />
-<img width="2844" height="786" alt="image" src="https://github.com/user-attachments/assets/2a596428-b6de-40be-a7c3-b1ed679dde78" />
+<img width="1124" height="952" alt="image" src="https://github.com/user-attachments/assets/d6a942cd-39dc-48e5-9b65-73a7a5278198" />
+<img width="2844" height="1048" alt="image" src="https://github.com/user-attachments/assets/fee8ab90-3672-4d7f-a25c-2cc825438434" />
+<img width="1218" height="962" alt="image" src="https://github.com/user-attachments/assets/9ac2d67a-fff5-4a8a-a2b7-690b2e18d994" />
+<img width="2840" height="1048" alt="image" src="https://github.com/user-attachments/assets/a74e1b66-abe8-45eb-9ae3-0543111d217b" />
 
 ### Archive / Callback
 
 <img width="1250" height="1494" alt="image" src="https://github.com/user-attachments/assets/5a6c07cb-66c9-4b38-a5d6-6b7425c775b0" />
 <img width="2702" height="874" alt="image" src="https://github.com/user-attachments/assets/1625b3a1-5683-46ad-871a-a9aa1ac5eec7" />
+<img width="2822" height="1454" alt="image" src="https://github.com/user-attachments/assets/cc7d770a-cc77-4904-8007-b5ec89e1c0db" />
 
 ---
 
