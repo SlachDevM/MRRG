@@ -185,9 +185,13 @@ export default function JobModal({
 
   if (!isOpen) return null;
 
-  const isAssignedWorker = currentUserId && selectedWorkers.includes(currentUserId);
+  const normalizedUserId = currentUserId != null ? Number(currentUserId) : null;
+  const isAssignedWorker =
+    normalizedUserId != null &&
+    (selectedWorkers.includes(normalizedUserId) ||
+      historicalWorkers?.assignedWorkerDetails?.some((worker) => Number(worker.id) === normalizedUserId));
   const permissions = getJobPermissions(
-    job,
+    job ? { ...job, status: jobStatus ?? job.status } : job,
     { role: canManage ? 'MANAGER' : 'WORKER' },
     isAssignedWorker,
     { afterPhotoCount: afterPhotos.length }
@@ -631,8 +635,10 @@ export default function JobModal({
 
                 <fieldset className="job-types-fieldset">
                   <legend>Assign Workers</legend>
-                  {!canManage && selectedWorkers.length > 0 ? (
-                    <p className="job-modal-hint">{workers.filter(w => selectedWorkers.includes(w.id)).map(w => w.name).join(', ')}</p>
+                  {!canManage ? (
+                    <p className="job-modal-hint job-modal-readonly-workers">
+                      {formatWorkers(historicalWorkers || job)}
+                    </p>
                   ) : workers.length === 0 ? (
                     <p className="job-modal-hint">No workers available.</p>
                   ) : (
