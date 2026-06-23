@@ -96,6 +96,7 @@ export default function JobModal({
   const [jobStatus, setJobStatus] = useState(null);
   const [beforePhotos, setBeforePhotos] = useState([]);
   const [afterPhotos, setAfterPhotos] = useState([]);
+  const [savedAfterPhotoCount, setSavedAfterPhotoCount] = useState(0);
   const [historicalWorkers, setHistoricalWorkers] = useState(null);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -104,6 +105,18 @@ export default function JobModal({
   const [archiving, setArchiving] = useState(false);
   const [callbackFixing, setCallbackFixing] = useState(false);
   const [loadingJob, setLoadingJob] = useState(false);
+
+  const applySavedJobState = (savedJob) => {
+    if (!savedJob) return;
+    if (savedJob.status) {
+      setJobStatus(savedJob.status);
+    }
+    const savedBefore = parsePhotosFromJob(savedJob, 'beforePhotos', 'beforePhoto');
+    const savedAfter = parsePhotosFromJob(savedJob, 'afterPhotos', 'afterPhoto');
+    setBeforePhotos(savedBefore);
+    setAfterPhotos(savedAfter);
+    setSavedAfterPhotoCount(savedAfter.length);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -133,6 +146,7 @@ export default function JobModal({
       setSelectedWorkers([]);
       setBeforePhotos([]);
       setAfterPhotos([]);
+      setSavedAfterPhotoCount(0);
       setHistoricalWorkers(null);
       setError('');
     };
@@ -163,9 +177,7 @@ export default function JobModal({
         setSelectedWorkers(
           fullJob.assignedWorkers ? fullJob.assignedWorkers.split(',').filter(Boolean).map(Number) : []
         );
-        setJobStatus(fullJob.status || null);
-        setBeforePhotos(parsePhotosFromJob(fullJob, 'beforePhotos', 'beforePhoto'));
-        setAfterPhotos(parsePhotosFromJob(fullJob, 'afterPhotos', 'afterPhoto'));
+        applySavedJobState(fullJob);
         setHistoricalWorkers({
           assignedWorkers: fullJob.assignedWorkers || '',
           assignedWorkerDetails: fullJob.assignedWorkerDetails || [],
@@ -194,7 +206,7 @@ export default function JobModal({
     job ? { ...job, status: jobStatus ?? job.status } : job,
     { role: canManage ? 'MANAGER' : 'WORKER' },
     isAssignedWorker,
-    { afterPhotoCount: afterPhotos.length }
+    { afterPhotoCount: savedAfterPhotoCount }
   );
   const {
     isArchived,
@@ -260,8 +272,7 @@ export default function JobModal({
     }
 
     const savedJob = await apiClient.put(`${API_ENDPOINTS.JOBS}/${job.id}`, payload);
-    setBeforePhotos(parsePhotosFromJob(savedJob, 'beforePhotos', 'beforePhoto'));
-    setAfterPhotos(parsePhotosFromJob(savedJob, 'afterPhotos', 'afterPhoto'));
+    applySavedJobState(savedJob);
     onSuccess(savedJob);
     return savedJob;
   };
@@ -399,7 +410,6 @@ export default function JobModal({
     setSubmitting(true);
     try {
       await persistPhotoLists(beforePhotos, afterPhotos, true);
-      onClose();
     } catch (err) {
       console.error(err);
       setError(getApiErrorMessage(err, 'Failed to save changes.'));
