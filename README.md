@@ -15,7 +15,7 @@ Business Management Platform for Margaret River Re-Gutter
 
 ### Dashboard:  
 
-<img width="2838" height="1508" alt="image" src="https://github.com/user-attachments/assets/47af2e86-5bb0-4d9c-9fab-714d30fc2230" />
+<img width="2840" height="1532" alt="image" src="https://github.com/user-attachments/assets/1e8b979a-e595-4dca-9341-4234b12a88e6" />
 
 ---
 
@@ -303,7 +303,6 @@ Tested areas include:
 
 <img width="1244" height="1498" alt="image" src="https://github.com/user-attachments/assets/3ffd18d2-9cee-4aa4-8eff-304891b4b015" />
 <img width="1252" height="748" alt="image" src="https://github.com/user-attachments/assets/597f8859-3009-486e-ba8a-f8314f3d5fda" />
-<img width="1254" height="1512" alt="image" src="https://github.com/user-attachments/assets/5e168306-3399-44d0-91d7-2e204a1d5795" />
 
 ### Scheduling
 
@@ -311,8 +310,8 @@ Tested areas include:
 
 ### Notifications 
 
-<img width="2802" height="1518" alt="image" src="https://github.com/user-attachments/assets/2cd77d84-d5ea-46ba-bffc-45cf38de9652" />
-<img width="2834" height="1520" alt="image" src="https://github.com/user-attachments/assets/2e0cde92-b1bd-48ba-9bcc-469d3b2dad62" />
+<img width="2828" height="1120" alt="image" src="https://github.com/user-attachments/assets/8acb316f-52b3-4d4d-ab2b-b53ff1de9f11" />
+<img width="2846" height="1100" alt="image" src="https://github.com/user-attachments/assets/0c74d028-87f9-4805-aefa-7d17a3e94289" />
 
 ### Validation 
 
