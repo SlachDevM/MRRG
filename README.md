@@ -58,6 +58,7 @@ Additional project documentation is available in the `docs/` directory.
 |----------|-------------|
 | Project Philosophy | Design principles and development philosophy |
 | Software Architecture | High-level architecture of the MRRG ecosystem |
+| Database Schema | Detailed description of MRRG database |
 | Security Model | Security model and authentication strategy |
 | Installation Guide | Local development environment setup |
 | Maintenance Guide | Guidance for maintaining and extending the project |
