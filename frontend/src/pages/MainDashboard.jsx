@@ -5,7 +5,7 @@ import WeekView from '../components/WeekView';
 import JobList from '../components/JobList';
 import JobModal from '../components/JobModal';
 import NotificationButton from '../components/NotificationButton';
-import apiClient from '../services/apiClient';
+import apiClient, { getApiErrorMessage } from '../services/apiClient';
 import { JOB_STATUSES, API_ENDPOINTS } from '../constants/jobConfig';
 import { getMonday } from '../utils/dateUtils';
 import '../styles/Dashboard.css';
@@ -21,6 +21,7 @@ export default function MainDashboard() {
   const [prefilledDate, setPrefilledDate] = useState(null);
   const [weekRefreshKey, setWeekRefreshKey] = useState(0);
   const [selectedWeekStart, setSelectedWeekStart] = useState(() => getMonday(new Date()));
+  const [jobOpenError, setJobOpenError] = useState('');
 
   const canManage = auth?.user?.role === 'MANAGER' || auth?.user?.role === 'ADMIN';
 
@@ -39,11 +40,13 @@ export default function MainDashboard() {
 
     const openJobFromParam = async () => {
       try {
+        setJobOpenError('');
         const job = await apiClient.get(`${API_ENDPOINTS.JOBS}/${jobId}`);
         setSelectedJob(job);
         setShowJobModal(true);
       } catch (err) {
         console.error('Failed to open job from notification:', err);
+        setJobOpenError(getApiErrorMessage(err, 'Unable to open this job.'));
       } finally {
         setSearchParams({}, { replace: true });
       }
@@ -191,6 +194,11 @@ export default function MainDashboard() {
 
 
       <main className="dashboard-content">
+        {jobOpenError && (
+          <div className="dashboard-error" role="alert">
+            {jobOpenError}
+          </div>
+        )}
 
         <div className="week-section">
 

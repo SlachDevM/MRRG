@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
-import apiClient from '../services/apiClient';
+import apiClient, { getApiErrorMessage } from '../services/apiClient';
 import { API_ENDPOINTS } from '../constants/jobConfig';
 import '../styles/NotificationPage.css';
 
@@ -13,11 +13,10 @@ const NOTIFICATION_TYPE_LABELS = {
   JOB_CONFIRMED: 'Job Confirmed',
 };
 
-const NAVIGABLE_TYPES = ['JOB_ASSIGNED', 'JOB_READY_FOR_CONFIRMATION'];
-
-function getActionHint(type) {
-  if (type === 'JOB_ASSIGNED') return 'Click to view job details';
-  if (type === 'JOB_READY_FOR_CONFIRMATION') return 'Click to review and confirm';
+function getActionHint(notif) {
+  if (notif.type === 'JOB_ASSIGNED') return 'Click to view job details';
+  if (notif.type === 'JOB_READY_FOR_CONFIRMATION') return 'Click to review and confirm';
+  if (notif.jobId) return 'Click to view related job';
   return null;
 }
 
@@ -26,6 +25,7 @@ export default function NotificationPage() {
   const { auth, logout } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const { decrementUnread, clearUnread, refreshUnreadCount } = useNotifications();
 
   useEffect(() => {
@@ -84,6 +84,18 @@ export default function NotificationPage() {
     navigate('/login');
   };
 
+  const handleNotificationClick = async (notif) => {
+    setError('');
+    await handleMarkAsRead(notif.id);
+
+    if (!notif.jobId) {
+      setError('This notification is not linked to a job.');
+      return;
+    }
+
+    navigate(`/?jobId=${notif.jobId}`);
+  };
+
   if (loading) {
     return <div className="loading">Loading notifications...</div>;
   }
@@ -110,6 +122,12 @@ export default function NotificationPage() {
       </header>
 
       <main className="notification-content">
+        {error && (
+          <div className="notification-error" role="alert">
+            {error}
+          </div>
+        )}
+
         {notifications.length === 0 ? (
           <div className="no-notifications">
             <p>You have no notifications.</p>
@@ -117,7 +135,7 @@ export default function NotificationPage() {
         ) : (
           <div className="notification-list">
             {notifications.map((notif) => {
-              const actionHint = getActionHint(notif.type);
+              const actionHint = getActionHint(notif);
 
               return (
                 <div
