@@ -328,10 +328,12 @@ Tested areas include:
 
 ### User Management
 
-<img width="1124" height="952" alt="image" src="https://github.com/user-attachments/assets/d6a942cd-39dc-48e5-9b65-73a7a5278198" />
-<img width="2844" height="1048" alt="image" src="https://github.com/user-attachments/assets/fee8ab90-3672-4d7f-a25c-2cc825438434" />
-<img width="1218" height="962" alt="image" src="https://github.com/user-attachments/assets/9ac2d67a-fff5-4a8a-a2b7-690b2e18d994" />
-<img width="2840" height="1048" alt="image" src="https://github.com/user-attachments/assets/a74e1b66-abe8-45eb-9ae3-0543111d217b" />
+<img width="1124" height="958" alt="image" src="https://github.com/user-attachments/assets/faa8a2fb-56d6-467a-9efe-ab18c0b0bbae" />
+<img width="2840" height="768" alt="image" src="https://github.com/user-attachments/assets/0dd2bfa1-b138-4ce0-a371-9c4846b92a6e" />
+<img width="1478" height="994" alt="image" src="https://github.com/user-attachments/assets/c5d47bfb-aea1-47aa-9269-9b86e766da00" />
+<img width="972" height="1092" alt="image" src="https://github.com/user-attachments/assets/ac250514-5ea3-4abc-930b-7f07146f44ea" />
+<img width="974" height="816" alt="image" src="https://github.com/user-attachments/assets/38130dc0-a196-4a9c-858a-7eb6a7b1407f" />
+<img width="2844" height="786" alt="image" src="https://github.com/user-attachments/assets/2a596428-b6de-40be-a7c3-b1ed679dde78" />
 
 ### Archive / Callback
 
