@@ -112,7 +112,7 @@ public class JobService {
         requireManagerOrAdmin(createdBy);
         String workersInput = job.getAssignedWorkersInput();
         validateAssignableWorkers(workersInput);
-        applyAssignedWorkers(job, workersInput);
+        applyAssignedWorkersIfChanged(job, workersInput);
 
         boolean hasDate = job.getJobDate() != null;
         boolean hasWorkers = !job.getAssignedWorkerIds().isEmpty();
@@ -147,10 +147,10 @@ public class JobService {
                 applyManagerSupplementaryUpdate(job, jobUpdate);
             } else {
                 boolean wasPending = (job.getJobDate() == null);
-                applyManagerJobUpdate(job, jobUpdate);
+                boolean assignmentsChanged = applyManagerJobUpdate(job, jobUpdate);
                 boolean isNowScheduled = (job.getJobDate() != null);
 
-                if (jobUpdate.getAssignedWorkersInput() != null && !jobUpdate.getAssignedWorkersInput().isBlank()) {
+                if (assignmentsChanged) {
                     notifyAssignedWorkers(job, id);
                 } else if (wasPending && isNowScheduled && !job.getAssignedWorkerIds().isEmpty()) {
                     notifyAssignedWorkers(job, id);
@@ -178,10 +178,12 @@ public class JobService {
         requireManagerOrAdmin(userId);
         validateAssignableWorkers(assignedWorkers);
         Job job = getJobOrThrow(id);
-        applyAssignedWorkers(job, assignedWorkers);
+        boolean assignmentsChanged = applyAssignedWorkersIfChanged(job, assignedWorkers);
         job.setUpdatedAt(System.currentTimeMillis());
         Job savedJob = jobRepository.save(job);
-        notifyAssignedWorkers(job, id);
+        if (assignmentsChanged) {
+            notifyAssignedWorkers(job, id);
+        }
         return savedJob;
     }
 
@@ -341,7 +343,7 @@ public class JobService {
         }
     }
 
-    private void applyManagerJobUpdate(Job job, Job jobUpdate) {
+    private boolean applyManagerJobUpdate(Job job, Job jobUpdate) {
         if (jobUpdate.getClientName() != null) {
             job.setClientName(jobUpdate.getClientName());
         }
@@ -377,11 +379,33 @@ public class JobService {
         } else if (job.getJobDate() != null && job.getJobStartHour() == null) {
             job.setJobStartHour("07:50");
         }
+        boolean assignmentsChanged = false;
         if (jobUpdate.getAssignedWorkersInput() != null) {
             validateAssignableWorkers(jobUpdate.getAssignedWorkersInput());
-            applyAssignedWorkers(job, jobUpdate.getAssignedWorkersInput());
+            assignmentsChanged = applyAssignedWorkersIfChanged(job, jobUpdate.getAssignedWorkersInput());
         }
         applyPhotoListUpdate(job, jobUpdate);
+        return assignmentsChanged;
+    }
+
+    private Set<Long> parseAssignedWorkerIds(String assignedWorkers) {
+        if (assignedWorkers == null || assignedWorkers.isBlank()) {
+            return Set.of();
+        }
+
+        Set<Long> workerIds = new HashSet<>();
+        for (String workerIdOrName : assignedWorkers.split(",")) {
+            String value = workerIdOrName.trim();
+            if (value.isEmpty()) {
+                continue;
+            }
+            try {
+                workerIds.add(Long.parseLong(value));
+            } catch (NumberFormatException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid worker ID: " + value);
+            }
+        }
+        return workerIds;
     }
 
     private void validateAssignableWorkers(String assignedWorkers) {
@@ -389,27 +413,7 @@ public class JobService {
             return;
         }
 
-        Set<Long> seenWorkerIds = new HashSet<>();
-
-        for (String workerIdOrName : assignedWorkers.split(",")) {
-            String value = workerIdOrName.trim();
-            if (value.isEmpty()) {
-                continue;
-            }
-
-            Long workerId;
-            try {
-                workerId = Long.parseLong(value);
-            } catch (NumberFormatException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid worker ID: " + value);
-            }
-
-            if (!seenWorkerIds.add(workerId)) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Duplicate worker assignment: " + workerId);
-            }
-
+        for (Long workerId : parseAssignedWorkerIds(assignedWorkers)) {
             User worker = userRepository.findById(workerId)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.BAD_REQUEST, "Worker not found: " + workerId));
@@ -431,28 +435,31 @@ public class JobService {
         }
     }
 
-    private void applyAssignedWorkers(Job job, String assignedWorkers) {
+    private boolean applyAssignedWorkersIfChanged(Job job, String assignedWorkers) {
         if (assignedWorkers == null) {
-            return;
+            return false;
         }
-        if (assignedWorkers.isBlank()) {
+
+        Set<Long> incomingWorkerIds = parseAssignedWorkerIds(assignedWorkers);
+        Set<Long> currentWorkerIds = new HashSet<>(job.getAssignedWorkerIds());
+        if (incomingWorkerIds.equals(currentWorkerIds)) {
+            return false;
+        }
+
+        if (incomingWorkerIds.isEmpty()) {
             job.clearAssignedWorkers();
-            return;
+            return true;
         }
 
         List<User> workers = new ArrayList<>();
-        for (String workerIdOrName : assignedWorkers.split(",")) {
-            String value = workerIdOrName.trim();
-            if (value.isEmpty()) {
-                continue;
-            }
-            Long workerId = Long.parseLong(value);
+        for (Long workerId : incomingWorkerIds.stream().sorted().toList()) {
             User worker = userRepository.findById(workerId)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.BAD_REQUEST, "Worker not found: " + workerId));
             workers.add(worker);
         }
         job.replaceAssignments(workers);
+        return true;
     }
 
     private void applyWorkerPhotoUpdate(Job job, Job jobUpdate) {

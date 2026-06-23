@@ -3,6 +3,7 @@ package com.mrrg.backend.service;
 import com.mrrg.backend.dto.CallbackFixRequest;
 import com.mrrg.backend.dto.JobResponseDto;
 import com.mrrg.backend.model.Job;
+import com.mrrg.backend.model.JobAssignment;
 import com.mrrg.backend.model.JobStatus;
 import com.mrrg.backend.model.NotificationType;
 import com.mrrg.backend.model.User;
@@ -18,8 +19,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -501,6 +504,132 @@ class JobServiceTest {
     }
 
     @Test
+    void update_shouldNotReplaceAssignments_whenManagerSavesUnchangedWorkers() throws Exception {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.SCHEDULED);
+        assignWorkersToJob(existingJob, 8L);
+        Set<JobAssignment> assignmentsBefore = assignmentEntities(existingJob);
+
+        Job update = new Job();
+        update.setAssignedWorkers("8");
+
+        User worker = workerWithId(8L);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(8L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getAssignedWorkers()).isEqualTo("8");
+        assertThat(assignmentEntities(existingJob)).containsExactlyInAnyOrderElementsOf(assignmentsBefore);
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
+        verify(jobRepository).save(existingJob);
+    }
+
+    @Test
+    void update_shouldTreatReorderedWorkersAsUnchanged() throws Exception {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.SCHEDULED);
+        assignWorkersToJob(existingJob, 2L, 3L);
+        Set<JobAssignment> assignmentsBefore = assignmentEntities(existingJob);
+
+        Job update = new Job();
+        update.setAssignedWorkers("3,2");
+
+        User worker2 = workerWithId(2L);
+        User worker3 = workerWithId(3L);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker2));
+        when(userRepository.findById(3L)).thenReturn(Optional.of(worker3));
+        when(userManagementService.computeStatus(any(User.class))).thenReturn(UserStatus.ACTIVE);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getAssignedWorkers()).isEqualTo("2,3");
+        assertThat(assignmentEntities(existingJob)).containsExactlyInAnyOrderElementsOf(assignmentsBefore);
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
+    }
+
+    @Test
+    void update_shouldTreatDuplicateWorkerIdsAsUnchanged_whenCurrentAssignmentsMatch() throws Exception {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.SCHEDULED);
+        assignWorkersToJob(existingJob, 8L);
+        Set<JobAssignment> assignmentsBefore = assignmentEntities(existingJob);
+
+        Job update = new Job();
+        update.setAssignedWorkers("8, 8");
+
+        User worker = workerWithId(8L);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(8L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getAssignedWorkers()).isEqualTo("8");
+        assertThat(assignmentEntities(existingJob)).containsExactlyInAnyOrderElementsOf(assignmentsBefore);
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
+    }
+
+    @Test
+    void update_shouldClearAssignments_whenManagerRemovesAllWorkers() {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.SCHEDULED);
+        assignWorkersToJob(existingJob, 8L);
+
+        Job update = new Job();
+        update.setAssignedWorkers("");
+
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getAssignedWorkers()).isNull();
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
+    }
+
+    @Test
+    void update_shouldReplaceAssignmentsAndNotify_whenWorkersChange() {
+        Job existingJob = sampleJob();
+        existingJob.setId(10L);
+        existingJob.setStatus(JobStatus.SCHEDULED);
+        assignWorkersToJob(existingJob, 8L);
+
+        Job update = new Job();
+        update.setAssignedWorkers("9");
+
+        User worker9 = workerWithId(9L);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(existingJob));
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(userRepository.findById(9L)).thenReturn(Optional.of(worker9));
+        when(userManagementService.computeStatus(worker9)).thenReturn(UserStatus.ACTIVE);
+        when(jobRepository.save(any(Job.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Job result = jobService.update(10L, update, 1L);
+
+        assertThat(result.getAssignedWorkers()).isEqualTo("9");
+        verify(notificationService).create(
+                9L,
+                10L,
+                NotificationType.JOB_ASSIGNED,
+                "You have been assigned to job: Test Client"
+        );
+    }
+
+    @Test
     void assignWorkers_shouldSaveWorkersAndNotifyThem_whenUserIsManager() {
         Job job = sampleJob();
         job.setId(10L);
@@ -752,18 +881,47 @@ class JobServiceTest {
     }
 
     @Test
-    void assignWorkers_shouldRejectDuplicateWorkerIds() {
+    void assignWorkers_shouldNormalizeDuplicateWorkerIds() {
+        Job job = sampleJob();
+        job.setId(10L);
+
         User worker = workerWithId(2L);
 
         when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
         when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
         when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
 
-        assertThatThrownBy(() -> jobService.assignWorkers(10L, "2,2", 1L))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Duplicate worker assignment");
+        Job result = jobService.assignWorkers(10L, "2, 2", 1L);
 
-        verify(jobRepository, never()).save(any(Job.class));
+        assertThat(result.getAssignedWorkers()).isEqualTo("2");
+        verify(notificationService).create(
+                2L,
+                10L,
+                NotificationType.JOB_ASSIGNED,
+                "You have been assigned to job: Test Client"
+        );
+    }
+
+    @Test
+    void assignWorkers_shouldNotNotify_whenAssignmentsAreUnchanged() {
+        Job job = sampleJob();
+        job.setId(10L);
+        assignWorkersToJob(job, 2L);
+
+        User worker = workerWithId(2L);
+
+        when(userService.isManagerOrAdmin(1L)).thenReturn(true);
+        when(jobRepository.findById(10L)).thenReturn(Optional.of(job));
+        when(jobRepository.save(job)).thenReturn(job);
+        when(userRepository.findById(2L)).thenReturn(Optional.of(worker));
+        when(userManagementService.computeStatus(worker)).thenReturn(UserStatus.ACTIVE);
+
+        Job result = jobService.assignWorkers(10L, "2", 1L);
+
+        assertThat(result.getAssignedWorkers()).isEqualTo("2");
+        verify(notificationService, never()).create(anyLong(), anyLong(), any(), anyString());
     }
 
     @Test
@@ -1041,5 +1199,12 @@ class JobServiceTest {
                 .mapToObj(this::workerWithId)
                 .toList();
         job.replaceAssignments(workers);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<JobAssignment> assignmentEntities(Job job) throws Exception {
+        var field = Job.class.getDeclaredField("assignments");
+        field.setAccessible(true);
+        return new HashSet<>((Set<JobAssignment>) field.get(job));
     }
 }
