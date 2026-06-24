@@ -311,7 +311,7 @@ app.bootstrap.initial-admin.enabled=false
 
 Backend services are extensively covered with unit tests using JUnit 5 and Mockito.
 
-More than 160 automated tests validate authentication, user lifecycle, business workflows, notifications and security rules.
+More than 180 automated tests validate authentication, user lifecycle, business workflows, notifications and security rules.
 
 Tested areas include:
 - Authentication
