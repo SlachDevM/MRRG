@@ -25,4 +25,4 @@ jobs:
           cache: maven
 
       - name: Run unit tests
-        run: mvn clean test
+        run: ./mvnw clean test
